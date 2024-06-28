@@ -31,6 +31,7 @@
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             Tabla = new DataGridView();
             Id = new DataGridViewTextBoxColumn();
@@ -55,6 +56,9 @@
             Lb_renglones = new Label();
             Lb_Incompletos = new Label();
             label8 = new Label();
+            Cargar = new Button();
+            Cancelado = new TextBox();
+            Cb_Descuentos = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)Tabla).BeginInit();
             SuspendLayout();
             // 
@@ -68,9 +72,11 @@
             Tabla.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             Tabla.BackgroundColor = Color.FromArgb(40, 40, 40);
             Tabla.BorderStyle = BorderStyle.None;
-            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = Color.DarkBlue;
-            dataGridViewCellStyle2.Font = new Font("Arial", 14.25F, FontStyle.Regular, GraphicsUnit.Point);
+            Tabla.CellBorderStyle = DataGridViewCellBorderStyle.RaisedHorizontal;
+            Tabla.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle2.BackColor = Color.CadetBlue;
+            dataGridViewCellStyle2.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold, GraphicsUnit.Point);
             dataGridViewCellStyle2.ForeColor = Color.White;
             dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
             dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
@@ -78,6 +84,7 @@
             Tabla.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
             Tabla.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             Tabla.Columns.AddRange(new DataGridViewColumn[] { Id, Código, Descripcion, Cantidad_Solicitada, Cantidad_Revisada, Nota, Cantidad_Pendiente });
+            Tabla.Cursor = Cursors.Hand;
             dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle3.BackColor = Color.White;
             dataGridViewCellStyle3.Font = new Font("Arial", 14.25F, FontStyle.Regular, GraphicsUnit.Point);
@@ -86,13 +93,22 @@
             dataGridViewCellStyle3.SelectionForeColor = Color.White;
             dataGridViewCellStyle3.WrapMode = DataGridViewTriState.False;
             Tabla.DefaultCellStyle = dataGridViewCellStyle3;
+            Tabla.EnableHeadersVisualStyles = false;
             Tabla.Location = new Point(14, 234);
             Tabla.Margin = new Padding(5, 4, 5, 4);
             Tabla.Name = "Tabla";
             Tabla.ReadOnly = true;
+            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = SystemColors.ActiveCaption;
+            dataGridViewCellStyle4.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold, GraphicsUnit.Point);
+            dataGridViewCellStyle4.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle4.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle4.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle4.WrapMode = DataGridViewTriState.True;
+            Tabla.RowHeadersDefaultCellStyle = dataGridViewCellStyle4;
             Tabla.RowHeadersVisible = false;
             Tabla.RowTemplate.Height = 35;
-            Tabla.Size = new Size(980, 482);
+            Tabla.Size = new Size(980, 494);
             Tabla.TabIndex = 0;
             Tabla.CellClick += Tabla_CellClick;
             Tabla.CellMouseDown += Tabla_CellMouseDown;
@@ -152,12 +168,12 @@
             label1.Anchor = AnchorStyles.Top;
             label1.AutoSize = true;
             label1.BackColor = Color.Transparent;
-            label1.Font = new Font("Tahoma", 18F, FontStyle.Bold, GraphicsUnit.Point);
+            label1.Font = new Font("Verdana", 18F, FontStyle.Bold, GraphicsUnit.Point);
             label1.ForeColor = Color.CadetBlue;
-            label1.Location = new Point(355, 3);
+            label1.Location = new Point(318, 3);
             label1.Margin = new Padding(5, 0, 5, 0);
             label1.Name = "label1";
-            label1.Size = new Size(329, 29);
+            label1.Size = new Size(363, 29);
             label1.TabIndex = 1;
             label1.Text = "VALIDACIÓN DE PEDIDOS";
             label1.TextAlign = ContentAlignment.MiddleCenter;
@@ -223,12 +239,12 @@
             // 
             label2.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             label2.AutoSize = true;
-            label2.Font = new Font("Arial Narrow", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            label2.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label2.ForeColor = Color.CadetBlue;
             label2.Location = new Point(582, 49);
             label2.Margin = new Padding(5, 0, 5, 0);
             label2.Name = "label2";
-            label2.Size = new Size(77, 25);
+            label2.Size = new Size(82, 23);
             label2.TabIndex = 6;
             label2.Text = "Pedido:";
             // 
@@ -236,12 +252,12 @@
             // 
             label3.Anchor = AnchorStyles.Top;
             label3.AutoSize = true;
-            label3.Font = new Font("Arial Narrow", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            label3.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label3.ForeColor = Color.CadetBlue;
             label3.Location = new Point(14, 159);
             label3.Margin = new Padding(5, 0, 5, 0);
             label3.Name = "label3";
-            label3.Size = new Size(97, 25);
+            label3.Size = new Size(102, 23);
             label3.TabIndex = 7;
             label3.Text = "Escanear:";
             // 
@@ -264,12 +280,12 @@
             // 
             label4.Anchor = AnchorStyles.Top;
             label4.AutoSize = true;
-            label4.Font = new Font("Arial Narrow", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            label4.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label4.ForeColor = Color.CadetBlue;
             label4.Location = new Point(153, 89);
             label4.Margin = new Padding(5, 0, 5, 0);
             label4.Name = "label4";
-            label4.Size = new Size(87, 25);
+            label4.Size = new Size(95, 23);
             label4.TabIndex = 9;
             label4.Text = "Surtidor:";
             // 
@@ -299,22 +315,22 @@
             // label6
             // 
             label6.AutoSize = true;
-            label6.Font = new Font("Arial", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            label6.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label6.ForeColor = Color.CadetBlue;
             label6.Location = new Point(14, 206);
             label6.Name = "label6";
-            label6.Size = new Size(243, 24);
+            label6.Size = new Size(228, 23);
             label6.TabIndex = 11;
             label6.Text = "Renglones pendientes:";
             // 
             // Lb_renglones
             // 
             Lb_renglones.AutoSize = true;
-            Lb_renglones.Font = new Font("Arial", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            Lb_renglones.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             Lb_renglones.ForeColor = Color.CadetBlue;
             Lb_renglones.Location = new Point(260, 206);
             Lb_renglones.Name = "Lb_renglones";
-            Lb_renglones.Size = new Size(22, 24);
+            Lb_renglones.Size = new Size(22, 23);
             Lb_renglones.TabIndex = 12;
             Lb_renglones.Text = "0";
             // 
@@ -322,11 +338,11 @@
             // 
             Lb_Incompletos.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             Lb_Incompletos.AutoSize = true;
-            Lb_Incompletos.Font = new Font("Arial", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            Lb_Incompletos.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             Lb_Incompletos.ForeColor = Color.CadetBlue;
             Lb_Incompletos.Location = new Point(960, 198);
             Lb_Incompletos.Name = "Lb_Incompletos";
-            Lb_Incompletos.Size = new Size(22, 24);
+            Lb_Incompletos.Size = new Size(22, 23);
             Lb_Incompletos.TabIndex = 14;
             Lb_Incompletos.Text = "0";
             // 
@@ -334,13 +350,54 @@
             // 
             label8.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             label8.AutoSize = true;
-            label8.Font = new Font("Arial", 15.75F, FontStyle.Bold, GraphicsUnit.Point);
+            label8.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label8.ForeColor = Color.CadetBlue;
             label8.Location = new Point(689, 198);
             label8.Name = "label8";
-            label8.Size = new Size(255, 24);
+            label8.Size = new Size(240, 23);
             label8.TabIndex = 13;
             label8.Text = "Renglones incompletos:";
+            // 
+            // Cargar
+            // 
+            Cargar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            Cargar.BackColor = Color.CadetBlue;
+            Cargar.Cursor = Cursors.Hand;
+            Cargar.FlatStyle = FlatStyle.Flat;
+            Cargar.Font = new Font("Arial Black", 11.25F, FontStyle.Bold, GraphicsUnit.Point);
+            Cargar.Location = new Point(900, 140);
+            Cargar.Margin = new Padding(5, 4, 5, 4);
+            Cargar.Name = "Cargar";
+            Cargar.Size = new Size(94, 42);
+            Cargar.TabIndex = 15;
+            Cargar.Text = "Cargar";
+            Cargar.UseVisualStyleBackColor = false;
+            Cargar.Click += Cargar_Click;
+            // 
+            // Cancelado
+            // 
+            Cancelado.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            Cancelado.BorderStyle = BorderStyle.FixedSingle;
+            Cancelado.Font = new Font("Arial", 15.75F, FontStyle.Regular, GraphicsUnit.Point);
+            Cancelado.Location = new Point(859, 100);
+            Cancelado.Margin = new Padding(5, 4, 5, 4);
+            Cancelado.Name = "Cancelado";
+            Cancelado.Size = new Size(135, 32);
+            Cancelado.TabIndex = 16;
+            // 
+            // Cb_Descuentos
+            // 
+            Cb_Descuentos.AutoSize = true;
+            Cb_Descuentos.Checked = true;
+            Cb_Descuentos.CheckState = CheckState.Checked;
+            Cb_Descuentos.Font = new Font("Tahoma", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
+            Cb_Descuentos.ForeColor = Color.CadetBlue;
+            Cb_Descuentos.Location = new Point(14, 121);
+            Cb_Descuentos.Name = "Cb_Descuentos";
+            Cb_Descuentos.Size = new Size(139, 27);
+            Cb_Descuentos.TabIndex = 17;
+            Cb_Descuentos.Text = "Descuentos";
+            Cb_Descuentos.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -348,6 +405,9 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(33, 33, 33);
             ClientSize = new Size(1008, 729);
+            Controls.Add(Cb_Descuentos);
+            Controls.Add(Cancelado);
+            Controls.Add(Cargar);
             Controls.Add(Lb_Incompletos);
             Controls.Add(label8);
             Controls.Add(Lb_renglones);
@@ -370,7 +430,7 @@
             Margin = new Padding(5, 4, 5, 4);
             Name = "Form1";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Developed by Atzin Not Found";
+            Text = "Developed by Atzin Not Found V13";
             WindowState = FormWindowState.Maximized;
             Load += Form1_Load;
             KeyDown += Form1_KeyDown;
@@ -404,5 +464,8 @@
         private Label Lb_renglones;
         private Label Lb_Incompletos;
         private Label label8;
+        private Button Cargar;
+        private TextBox Cancelado;
+        private CheckBox Cb_Descuentos;
     }
 }

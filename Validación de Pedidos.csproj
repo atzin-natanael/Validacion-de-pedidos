@@ -10,6 +10,10 @@
     <ApplicationIcon>cadetblue.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="cadetblue.ico" />
   </ItemGroup>

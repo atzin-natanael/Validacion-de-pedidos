@@ -64,7 +64,7 @@
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label1.ForeColor = Color.White;
-            label1.Location = new Point(267, 162);
+            label1.Location = new Point(263, 203);
             label1.Name = "label1";
             label1.Size = new Size(127, 25);
             label1.TabIndex = 1;
@@ -75,7 +75,7 @@
             label2.AutoSize = true;
             label2.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label2.ForeColor = Color.White;
-            label2.Location = new Point(274, 233);
+            label2.Location = new Point(270, 274);
             label2.Name = "label2";
             label2.Size = new Size(120, 25);
             label2.TabIndex = 2;
@@ -86,7 +86,7 @@
             LbSolicitado.AutoSize = true;
             LbSolicitado.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             LbSolicitado.ForeColor = Color.White;
-            LbSolicitado.Location = new Point(409, 162);
+            LbSolicitado.Location = new Point(405, 203);
             LbSolicitado.Name = "LbSolicitado";
             LbSolicitado.Size = new Size(127, 25);
             LbSolicitado.TabIndex = 3;
@@ -97,7 +97,7 @@
             LbPendiente.AutoSize = true;
             LbPendiente.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             LbPendiente.ForeColor = Color.White;
-            LbPendiente.Location = new Point(409, 233);
+            LbPendiente.Location = new Point(405, 274);
             LbPendiente.Name = "LbPendiente";
             LbPendiente.Size = new Size(127, 25);
             LbPendiente.TabIndex = 4;
@@ -106,8 +106,8 @@
             // Cantidad
             // 
             Cantidad.Font = new Font("Arial Black", 12F, FontStyle.Bold, GraphicsUnit.Point);
-            Cantidad.Location = new Point(307, 273);
-            Cantidad.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            Cantidad.Location = new Point(303, 314);
+            Cantidad.Maximum = new decimal(new int[] { 30000, 0, 0, 0 });
             Cantidad.Name = "Cantidad";
             Cantidad.Size = new Size(120, 30);
             Cantidad.TabIndex = 5;
@@ -118,7 +118,7 @@
             label3.AutoSize = true;
             label3.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label3.ForeColor = Color.White;
-            label3.Location = new Point(433, 278);
+            label3.Location = new Point(429, 319);
             label3.Name = "label3";
             label3.Size = new Size(76, 25);
             label3.TabIndex = 6;
@@ -129,7 +129,7 @@
             label4.AutoSize = true;
             label4.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             label4.ForeColor = Color.White;
-            label4.Location = new Point(291, 198);
+            label4.Location = new Point(287, 239);
             label4.Name = "label4";
             label4.Size = new Size(103, 25);
             label4.TabIndex = 7;
@@ -140,7 +140,7 @@
             LbRecibido.AutoSize = true;
             LbRecibido.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point);
             LbRecibido.ForeColor = Color.White;
-            LbRecibido.Location = new Point(409, 198);
+            LbRecibido.Location = new Point(405, 239);
             LbRecibido.Name = "LbRecibido";
             LbRecibido.Size = new Size(103, 25);
             LbRecibido.TabIndex = 8;
@@ -160,7 +160,7 @@
             flowLayoutPanel2.Controls.Add(Lb_Nota);
             flowLayoutPanel2.Location = new Point(12, 87);
             flowLayoutPanel2.Name = "flowLayoutPanel2";
-            flowLayoutPanel2.Size = new Size(773, 72);
+            flowLayoutPanel2.Size = new Size(773, 113);
             flowLayoutPanel2.TabIndex = 10;
             // 
             // label5
@@ -189,7 +189,7 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(33, 33, 33);
-            ClientSize = new Size(797, 315);
+            ClientSize = new Size(797, 365);
             Controls.Add(flowLayoutPanel2);
             Controls.Add(flowLayoutPanel1);
             Controls.Add(LbRecibido);

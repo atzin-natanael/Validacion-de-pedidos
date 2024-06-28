@@ -17,6 +17,8 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using System.Runtime.CompilerServices;
 using System.Media;
 using DocumentFormat.OpenXml.Drawing.Charts;
+using System.Reflection;
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 
 namespace Validación_de_Pedidos
 {
@@ -28,19 +30,48 @@ namespace Validación_de_Pedidos
         public Form1()
         {
             InitializeComponent();
+            Config();
             BtnPDF.Enabled = false;
             Leer_Datos();
             Cb_Surtidor.SelectedIndex = -1;
             Cb_Surtidor.DropDownHeight = 250;
             TxtPedido.Select();
+            Tabla.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+        }
+        public void Config()
+        {
+            string filePath = "C:\\ConfigDB\\DB.txt"; // Ruta de tu archivo de texto
+            List<string> lineas = new List<string>();
+
+            // Verificar si el archivo existe
+            if (File.Exists(filePath))
+            {
+                // Leer todas las líneas del archivo
+                using (StreamReader sr = new StreamReader(filePath))
+                {
+                    string linea;
+                    while ((linea = sr.ReadLine()) != null)
+                    {
+                        GlobalSettings.Instance.Config.Add(linea);
+                    }
+
+                }
+                GlobalSettings.Instance.Ip = GlobalSettings.Instance.Config[0];
+                GlobalSettings.Instance.Puerto = GlobalSettings.Instance.Config[1];
+                GlobalSettings.Instance.Direccion = GlobalSettings.Instance.Config[2];
+                GlobalSettings.Instance.User = GlobalSettings.Instance.Config[3];
+                GlobalSettings.Instance.Pw = GlobalSettings.Instance.Config[4];
+            }
+
         }
         public void Leer_Datos()
         {
             nombresArray.Clear();
             nombresValor.Clear();
             //string filePath = "\\\\192.168.0.2\\C$\\clavesSurtido\\Claves.xlsx";
+
             string filePath = "\\\\SRVPRINCIPAL\\clavesSurtido\\Claves.xlsx";
-            
+            // string filePath = "C:\\clavesSurtido\\Claves.xlsx";
             using (SLDocument documento = new SLDocument(filePath))
             {
                 int filas = documento.GetWorksheetStatistics().NumberOfRows;
@@ -74,6 +105,52 @@ namespace Validación_de_Pedidos
             {
             }
         }
+        public decimal Impuesto(string Articulo_Id)
+        {
+            FbConnection con3 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con3.Open();
+                string Clave_Impuesto = "";
+                string impuesto = "";
+                string query3 = "SELECT * FROM IMPUESTOS_ARTICULOS WHERE ARTICULO_ID = '" + Articulo_Id + "'";
+                FbCommand command3 = new FbCommand(query3, con3);
+                FbDataReader reader3 = command3.ExecuteReader();
+                if (reader3.Read())
+                {
+                    Clave_Impuesto = reader3.GetString(2);
+                    //MessageBox.Show(GlobalSettings.Instance.Clave_impuesto);
+                }
+                reader3.Close();
+                //QUERI 4 PARA BUSCAR IMPORTE DEL ARTICULO
+
+                string query4 = "SELECT * FROM IMPUESTOS WHERE IMPUESTO_ID = '" + Clave_Impuesto + "'";
+                FbCommand command4 = new FbCommand(query4, con3);
+                FbDataReader reader4 = command4.ExecuteReader();
+                if (reader4.Read())
+                {
+                    impuesto = reader4.GetString(2);
+
+                }
+                reader4.Close();
+                if (impuesto == "16% IVA ")
+                    return (decimal)1.16;
+                else if (impuesto == "IEPS 8%")
+                    return (decimal)1.08;
+                else
+                    return 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return (decimal)1.16;
+            }
+            finally
+            {
+                con3.Close();
+            }
+        }
         private void BtnPedido_Click(object sender, EventArgs e)
         {
             if (Tabla.Rows.Count > 0)
@@ -94,7 +171,7 @@ namespace Validación_de_Pedidos
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             GlobalSettings.Instance.filepath = desktopPath + "\\" + TxtPedido.Text + ".txt";
             string Folio_Mod = TxtPedido.Text;
-            if (Folio_Mod[1] == 'O' || Folio_Mod[1] == 'E')
+            if (Folio_Mod[1] == 'O' || Folio_Mod[1] == 'E' || Folio_Mod[1] == 'P')
             {
                 int cont = 9 - Folio_Mod.Length;
                 string prefix = Folio_Mod.Substring(0, 2);
@@ -119,7 +196,7 @@ namespace Validación_de_Pedidos
                 Folio_Mod = prefix + patch + suffix;
             }
 
-            FbConnection con = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+            FbConnection con = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
             try
             {
                 // Crear un nuevo hilo y asignarle un método que se ejecutará en paralelo
@@ -135,8 +212,11 @@ namespace Validación_de_Pedidos
                 {
                     GlobalSettings.Instance.status = reader0.GetString(18);
                     GlobalSettings.Instance.FolioId = reader0.GetString(0);
+                    GlobalSettings.Instance.Docto_Ve_Id = GlobalSettings.Instance.FolioId;
                     GlobalSettings.Instance.Importe_Total = reader0.GetDecimal(26);
                     GlobalSettings.Instance.VendedorId = reader0.GetString(40);
+                    GlobalSettings.Instance.Desc_extra = reader0.GetDecimal(16);
+                    GlobalSettings.Instance.Desc_extra_importe = reader0.GetDecimal(17);
                     Find = true;
                 }
                 else
@@ -176,6 +256,7 @@ namespace Validación_de_Pedidos
                         Solicitado = reader1.GetDecimal(4),
                         Importe_neto_articulo = reader1.GetDecimal(8),
                         Descuento_porcentaje = reader1.GetDecimal(9),
+                        Descuento_extra_individual = reader1.GetDecimal(12),
                         Importe_total_articuloeliminado = reader1.GetDecimal(15),
                         Recibido = 0,
                         Nota = reader1.GetString(18),
@@ -193,6 +274,15 @@ namespace Validación_de_Pedidos
 
                 }
                 reader1.Close();
+                for (int i = 0; i < Articulos.Count; ++i)
+                {
+                    decimal imp = Impuesto(Articulos[i].ArticuloId);
+                    if (imp == 1.16m)
+                    {
+                        GlobalSettings.Instance.Impuesto_real += Articulos[i].Importe_total_articuloeliminado * 0.16m;
+                    }
+                    GlobalSettings.Instance.Importe_real += Articulos[i].Importe_total_articuloeliminado;
+                }
                 //Inicio vendedor
                 string querynew = "SELECT * FROM VENDEDORES WHERE VENDEDOR_ID = '" + GlobalSettings.Instance.VendedorId + "';";
                 FbCommand commandonew = new FbCommand(querynew, con);
@@ -285,12 +375,12 @@ namespace Validación_de_Pedidos
                     //AL AGREGAR AL PEDIDO
                     if (Articulos[i].Codigo.Length > 6)
                     {
-                        FbConnection con3 = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+                        FbConnection con3 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
                         try
                         {
                             con3.Open();
                             string query12 = "SELECT * FROM CLAVES_ARTICULOS WHERE ARTICULO_ID = '" + Articulos[i].Clave + "' AND ROL_CLAVE_ART_ID = '17'";
-                            FbCommand command12 = new FbCommand(query12, con);
+                            FbCommand command12 = new FbCommand(query12, con3);
                             FbDataReader reader12 = command12.ExecuteReader();
                             if (reader12.Read())
                             {
@@ -483,7 +573,7 @@ namespace Validación_de_Pedidos
                                 i = GlobalSettings.Instance.Contador_Codigos;
                             if (Articulos[i].Codigo == TxtCodigo.Text)
                             {
-                                FbConnection con4 = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+                                FbConnection con4 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
                                 try
                                 {
                                     con4.Open();
@@ -512,7 +602,7 @@ namespace Validación_de_Pedidos
                                 Tabla.Rows[GlobalSettings.Instance.Current].Cells[1].Selected = true;
                                 encontrado = true;
                                 //red mode
-                                if (BtnPedido.BackColor == System.Drawing.Color.Red || BtnPedido.BackColor == System.Drawing.Color.Fuchsia)
+                                if (BtnPedido.BackColor == System.Drawing.Color.Red || BtnPedido.BackColor == System.Drawing.Color.Fuchsia || BtnPedido.BackColor == System.Drawing.Color.HotPink)
                                 {
                                     ejecutar(GlobalSettings.Instance.Contenido, GlobalSettings.Instance.Current);
                                     return;
@@ -536,7 +626,7 @@ namespace Validación_de_Pedidos
                     }
                     if (TxtCodigo.Text.Length > 6 || GlobalSettings.Instance.lastchance == true)
                     {
-                        FbConnection con3 = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+                        FbConnection con3 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
                         try
                         {
                             GlobalSettings.Instance.Contador_Codigos = 0;
@@ -640,7 +730,7 @@ namespace Validación_de_Pedidos
                                     Tabla.Rows[GlobalSettings.Instance.Current].Cells[0].Selected = true;
                                     Tabla.Rows[GlobalSettings.Instance.Current].Cells[1].Selected = true;
                                     //red mode
-                                    if (BtnPedido.BackColor == System.Drawing.Color.Red || BtnPedido.BackColor == System.Drawing.Color.Fuchsia)
+                                    if (BtnPedido.BackColor == System.Drawing.Color.Red || BtnPedido.BackColor == System.Drawing.Color.Fuchsia || BtnPedido.BackColor == System.Drawing.Color.HotPink)
                                     {
                                         ejecutar(GlobalSettings.Instance.Contenido, GlobalSettings.Instance.Current);
                                         return;
@@ -851,7 +941,7 @@ namespace Validación_de_Pedidos
         }
         public void Ubicacion(int index)
         {
-            FbConnection con = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+            FbConnection con = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
             try
             {
                 con.Open();
@@ -873,6 +963,12 @@ namespace Validación_de_Pedidos
                         if (columna2 == "108401")
                             Articulos[index].Ubicacion += "ISLA:  " + columna3 + "\n";
                     }
+                    //if (columna3 != "")
+                    //{
+                    //    if (columna2 == "108405")
+                    //       Articulos[index].Ubicacion += "CULIACÁN:  " + columna3 + "\n";
+
+                    //}
 
                 }
                 if (Articulos[index].Ubicacion == null)
@@ -1021,7 +1117,7 @@ namespace Validación_de_Pedidos
         }
         public void Existencia(int articulo_id)
         {
-            FbConnection con = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+            FbConnection con = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
             try
             {
                 con.Open();
@@ -1030,7 +1126,8 @@ namespace Validación_de_Pedidos
 
                 // Parámetros de entrada
                 command.Parameters.Add("V_ARTICULO_ID", FbDbType.Integer).Value = articulo_id;
-                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108404;
+                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108404; //peri
+                //command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108405; culiacan
                 command.Parameters.Add("V_FECHA", FbDbType.Date).Value = DateTime.Today;
                 command.Parameters.Add("V_ES_ULTIMO_COSTO", FbDbType.Char).Value = 'S';
                 command.Parameters.Add("V_SUCURSAL_ID", FbDbType.Integer).Value = 0;
@@ -1051,7 +1148,8 @@ namespace Validación_de_Pedidos
 
                 // Parámetros de entrada
                 command2.Parameters.Add("V_ARTICULO_ID", FbDbType.Integer).Value = articulo_id;
-                command2.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108403;
+                command2.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108403; //PERI
+                //command2.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108405; culiacan
                 command2.Parameters.Add("V_FECHA", FbDbType.Date).Value = DateTime.Today;
                 command2.Parameters.Add("V_ES_ULTIMO_COSTO", FbDbType.Char).Value = 'S';
                 command2.Parameters.Add("V_SUCURSAL_ID", FbDbType.Integer).Value = 0;
@@ -1072,6 +1170,7 @@ namespace Validación_de_Pedidos
                     var customMessageBox = new Mensaje();
                     // Establece el mensaje que deseas mostrar
                     customMessageBox.SetMensaje("TIENDA: " + ExistenciaTienda.ToString(), "existencia");
+                    //customMessageBox.SetMensaje("CULIACÁN: " + ExistenciaTienda.ToString(), "existencia");
                     // Muestra el formulario como un cuadro de diálogo modal
                     customMessageBox.ShowDialog();
                 }
@@ -1175,7 +1274,7 @@ namespace Validación_de_Pedidos
         }
         public void EliminarQuery()
         {
-            FbConnection con9 = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+            FbConnection con9 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
             try
             {
                 con9.Open();
@@ -1186,6 +1285,7 @@ namespace Validación_de_Pedidos
                 {
                     GlobalSettings.Instance.Importe_Total = reader10.GetDecimal(26);
                     GlobalSettings.Instance.Impuesto_total = reader10.GetDecimal(29);
+                    //GlobalSettings.Instance.Impuesto_real = GlobalSettings.Instance.Importe_Total * 0.16m;
                 }
                 reader10.Close();
 
@@ -1229,7 +1329,7 @@ namespace Validación_de_Pedidos
                 }
 
                 //ACTUALIZAR IMPUESTOS E IMPORTE EN EL PEDIDO
-                string query92 = "UPDATE DOCTOS_VE SET IMPORTE_NETO = @Importe, TOTAL_IMPUESTOS = @Impuestos WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.FolioId + "';";
+                string query92 = "UPDATE DOCTOS_VE SET IMPORTE_NETO = @Importe, TOTAL_IMPUESTOS = @Impuestos, DSCTO_IMPORTE = @Desc WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.FolioId + "';";
                 FbCommand command92 = new FbCommand(query92, con9);
 
                 // Agrega los parámetros
@@ -1241,13 +1341,26 @@ namespace Validación_de_Pedidos
 
                 }
                 GlobalSettings.Instance.Importe_Total -= GlobalSettings.Instance.Importearticuloeliminado;
+
                 if (GlobalSettings.Instance.Impuesto == "16% IVA ")
                 {
-                    decimal actual = (GlobalSettings.Instance.Importearticuloeliminado * 0.16m);
-                    decimal Impuesto = Math.Round(actual, 2);
+                    decimal actual = GlobalSettings.Instance.Importearticuloeliminado * 0.16m;
                     //MessageBox.Show("Impuesto actual: " + Impuesto.ToString());
                     //MessageBox.Show("Impuesto actualizado: " + actual.ToString());
-                    GlobalSettings.Instance.Impuesto_total -= Impuesto;
+                    GlobalSettings.Instance.Impuesto_total -= actual;
+                    GlobalSettings.Instance.Impuesto_real -= actual;
+                }
+                else if (GlobalSettings.Instance.Impuesto == "IEPS 8%")
+                {
+                    decimal actual = GlobalSettings.Instance.Importearticuloeliminado * 0.08m;
+                    //MessageBox.Show("Impuesto actual: " + Impuesto.ToString());
+                    //MessageBox.Show("Impuesto actualizado: " + actual.ToString());
+                    GlobalSettings.Instance.Impuesto_total -= actual;
+                    GlobalSettings.Instance.Impuesto_real -= actual;
+                }
+                if (GlobalSettings.Instance.Desc_extra_ind != 0)
+                {
+                    GlobalSettings.Instance.Desc_extra_importe -= GlobalSettings.Instance.Desc_extra_ind;
                 }
                 //else
                 //{
@@ -1262,8 +1375,9 @@ namespace Validación_de_Pedidos
                 //}
                 // GlobalSettings.Instance.Importe_Total += GlobalSettings.Instance.Importe_Total_Anterior;
                 //GlobalSettings.Instance.Impuesto_total += GlobalSettings.Instance.Impuesto_Total_Anterior;
-                command92.Parameters.AddWithValue("@Importe", GlobalSettings.Instance.Importe_Total);
-                command92.Parameters.AddWithValue("@Impuestos", Math.Ceiling(GlobalSettings.Instance.Impuesto_total * 100) / 100);
+                command92.Parameters.AddWithValue("@Importe", Math.Round(GlobalSettings.Instance.Importe_Total, 2));
+                command92.Parameters.AddWithValue("@Impuestos", Math.Round(((GlobalSettings.Instance.Impuesto_real * 100) / 100), 2));
+                command92.Parameters.AddWithValue("@Desc", Math.Round(GlobalSettings.Instance.Desc_extra_importe, 2));
                 // Ejecuta la consulta de actualización
                 rowsAffected = command92.ExecuteNonQuery();
 
@@ -1285,17 +1399,337 @@ namespace Validación_de_Pedidos
                 con9.Close();
             }
         }
+        public decimal SumarTodo()
+        {
+            FbConnection con9 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con9.Open();
+                string query10 = "SELECT * FROM DOCTOS_VE_DET WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.Docto_Ve_Id + "';";
+                FbCommand command10 = new FbCommand(query10, con9);
+                FbDataReader reader10 = command10.ExecuteReader();
+                decimal suma = 0;
+                while (reader10.Read())
+                {
+                    suma += reader10.GetDecimal(15);
+                    //GlobalSettings.Instance.Impuesto_real = GlobalSettings.Instance.Importe_Total * 0.16m;
+                }
+                return suma;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return 0;
+            }
+            finally
+            {
+                con9.Close();
+            }
+        }
+        public decimal SumarExtra()
+        {
+            FbConnection con9 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con9.Open();
+                string query10 = "SELECT * FROM DOCTOS_VE_DET WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.Docto_Ve_Id + "';";
+                FbCommand command10 = new FbCommand(query10, con9);
+                FbDataReader reader10 = command10.ExecuteReader();
+                decimal suma = 0;
+                while (reader10.Read())
+                {
+                    suma += reader10.GetDecimal(12);
+
+                    //GlobalSettings.Instance.Impuesto_real = GlobalSettings.Instance.Importe_Total * 0.16m;
+                }
+                return suma;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return 0;
+            }
+            finally
+            {
+                con9.Close();
+            }
+        }
+        public void ModificarTotales(decimal importe, decimal extra, decimal impuestos)
+        {
+            int tercerDecimal23 = (int)(Math.Floor(impuestos * 1000) % 10);
+            if (tercerDecimal23 == 5)
+                impuestos = Math.Ceiling(impuestos * 100) / 100;
+            FbConnection con9 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con9.Open();
+                //ACTUALIZAR IMPUESTOS E IMPORTE EN EL PEDIDO
+                string query92 = "UPDATE DOCTOS_VE SET IMPORTE_NETO = @Importe, TOTAL_IMPUESTOS= @Impuestos,  DSCTO_IMPORTE = @Desc WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.Docto_Ve_Id + "';";
+                FbCommand command9 = new FbCommand(query92, con9);
+                //GlobalSettings.Instance.Impuesto_total += GlobalSettings.Instance.Impuesto_Total_Anterior;
+                command9.Parameters.AddWithValue("@Importe", Math.Round(importe, 2));
+                command9.Parameters.AddWithValue("@Desc", Math.Round(extra, 2));
+                command9.Parameters.AddWithValue("@Impuestos", Math.Round(impuestos, 2));
+                // Ejecuta la consulta de actualización
+                int rowsAffected = command9.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    MessageBox.Show("No se pudo actualizar el importe");
+                    return;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con9.Close();
+            }
+        }
+        public void ModificarExtra(string Docto_ve_ID, decimal redondeado, decimal importe_neto)
+        {
+            FbConnection con9 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con9.Open();
+                //ACTUALIZAR IMPUESTOS E IMPORTE EN EL PEDIDO
+                string query92 = "UPDATE DOCTOS_VE_DET SET PRECIO_TOTAL_NETO = @Importe, DSCTO_EXTRA = @Desc WHERE DOCTO_VE_DET_ID = '" + Docto_ve_ID + "';";
+                FbCommand command9 = new FbCommand(query92, con9);
+
+                //GlobalSettings.Instance.Impuesto_total += GlobalSettings.Instance.Impuesto_Total_Anterior;
+                command9.Parameters.AddWithValue("@Importe", Math.Round(importe_neto, 2));
+                command9.Parameters.AddWithValue("@Desc", Math.Round(redondeado, 2));
+                // Ejecuta la consulta de actualización
+                int rowsAffected = command9.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    MessageBox.Show("No se pudo actualizar el importe");
+                    return;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con9.Close();
+            }
+        }
+        public void SumarTotales()
+        {
+            FbConnection con007 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con007.Open();
+                string query007 = "SELECT * FROM DOCTOS_VE_DET WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.FolioId + "';";
+                FbCommand command007 = new FbCommand(query007, con007);
+                FbDataReader reader007 = command007.ExecuteReader();
+                decimal extra = 0;
+                decimal extra3 = 0;
+                decimal extra4 = 0;
+                decimal importes = 0;
+                decimal importes2 = 0;
+                decimal extra_redondeado = 0;
+                decimal suma = 0;
+                string Docto_ve_det = "";
+                decimal redondeado = 0;
+                decimal importe_neto = 0;
+                decimal importe_neto2 = 0;
+                string articulo_id = "";
+                decimal impuesto = 0;
+                decimal impuestos = 0;
+                decimal importe_imp = 0;
+                decimal importe_imp_8 = 0;
+                decimal clear_suma_redondeada = 0;
+                decimal clear_suma = 0;
+                decimal clear_suma4 = 0;
+                decimal extra2 = 0;
+                while (reader007.Read())
+                {
+                    decimal unitario = 0;
+                    decimal piezas = 0;
+                    decimal descuento = 0;
+                    decimal sumatoria_neta2 = 0;
+                    decimal sumatoria_neta = 0;
+                    decimal descuento_neto = 0;
+                    Docto_ve_det = reader007.GetString(0);
+                    articulo_id = reader007.GetString(3);
+                    impuesto = ImpuestoC(articulo_id);
+                    piezas = reader007.GetDecimal(4);
+                    unitario = reader007.GetDecimal(8);
+                    descuento = reader007.GetDecimal(9);
+                    decimal desc_decimal = descuento / 100;
+                    descuento_neto = piezas * unitario * desc_decimal;
+                    sumatoria_neta = piezas * unitario - descuento_neto;
+                    sumatoria_neta2 = piezas * unitario - descuento_neto;
+                    decimal desc_decimal_extra = GlobalSettings.Instance.Desc_extra / 100;
+                    if (GlobalSettings.Instance.Desc_extra == 0)
+                    {
+                        if (impuesto != 0)
+                        {
+                            decimal extranomral = sumatoria_neta;
+                            decimal extranomral3 = sumatoria_neta;
+                            decimal finalred2 = 0;
+                            finalred2 = Math.Round(extranomral, 2);
+                            int tercerDecimal5 = (int)(Math.Floor(extranomral * 1000) % 10);
+                            if (tercerDecimal5 == 5)
+                            {
+                                extranomral = Math.Truncate(extranomral * 100) / 100;
+                                decimal dif = extranomral3 - extranomral;
+                                if (dif > 0.005m)
+                                    extranomral = finalred2;
+                            }
+                            if (impuesto == 1.16m)
+                            {
+                                importe_imp += extranomral;
+                            }
+                            else if (impuesto == 1.08m)
+                            {
+                                importe_imp_8 += extranomral;
+
+                            }
+                        }
+                    }
+                    if (GlobalSettings.Instance.Desc_extra != 0)
+                    {
+                        decimal red = sumatoria_neta * desc_decimal_extra;
+                        decimal clear = sumatoria_neta - Math.Round(red, 2);
+                        //decimal clear2 = sumatoria_neta - red;
+                        decimal clear3 = sumatoria_neta - Math.Round(red, 2);
+                        //clear_suma += Math.Round(clear2, 6);
+                        clear_suma4 += Math.Round(clear3, 3);
+                        decimal finalred = 0;
+                        finalred = Math.Round(clear, 2);
+                        int tercerDecimal6 = (int)(Math.Floor(clear * 1000) % 10);
+                        if (tercerDecimal6 == 5)
+                        {
+                            clear = Math.Truncate(clear * 100) / 100;
+                            decimal dif = clear3 - clear;
+                            if (dif > 0.005m)
+                                clear = finalred;
+                        }
+                        decimal redondeado_importe = Math.Round(clear, 2); //TARGET
+                        if (impuesto != 0)
+                        {
+
+                            if (impuesto == 1.16m)
+                            {
+                                importe_imp += redondeado_importe;
+                            }
+                            else if (impuesto == 1.08m)
+                            {
+                                importe_imp_8 += redondeado_importe;
+
+                            }
+                        }
+                        clear_suma_redondeada += redondeado_importe;
+                        redondeado = Math.Round(red, 2);
+                        importe_neto = Math.Round(sumatoria_neta, 2);
+                        extra_redondeado += redondeado;
+                        extra += Math.Round(sumatoria_neta, 4) * desc_decimal_extra;
+                        decimal pre = sumatoria_neta * desc_decimal_extra;
+                        decimal pre1 = Math.Round(sumatoria_neta, 3) * desc_decimal_extra;
+                        //decimal finalpred = 0;
+                        //finalpred = Math.Round(pre, 2);
+                        //int tercerDecimal66 = (int)(Math.Floor(pre * 1000) % 10);
+                        //if (tercerDecimal66 == 5)
+                        //{
+                        //    pre = Math.Truncate(pre * 100) / 100;
+                        //    decimal dif = pre1 - pre;
+                        //    if (dif > 0.005m)
+                        //        pre = finalpred;
+
+                        //}
+                        extra2 += Math.Round(pre, 3); //3
+                        extra3 += pre;
+                        extra4 += Math.Round(pre1, 3);
+                        importes += redondeado_importe;
+
+                    }
+                    else if (GlobalSettings.Instance.Desc_extra == 0)
+                    {
+                        importe_neto = sumatoria_neta;
+                        decimal finalred = 0;
+                        finalred = Math.Round(importe_neto, 2);
+                        int tercerDecimal66 = (int)(Math.Floor(importe_neto * 1000) % 10);
+                        if (tercerDecimal66 == 5)
+                        {
+                            importe_neto = Math.Truncate(importe_neto * 100) / 100;
+                            decimal dif = sumatoria_neta - importe_neto;
+                            if (dif > 0.005m)
+                                importe_neto = finalred;
+
+                        }
+                        decimal redondeado_importe = Math.Round(importe_neto, 2);
+                        importes += redondeado_importe;
+                        importe_neto2 = Math.Round(sumatoria_neta, 3);
+
+                        //importes += Math.Round(importe_neto, 2);
+                        importes2 += importe_neto2;
+                    }
+                    //GlobalSettings.Instance.Impuesto_real = GlobalSettings.Instance.Importe_Total * 0.16m;
+                }
+                if (GlobalSettings.Instance.Desc_extra != 0)
+                {
+                    int tercerDecimal223 = (int)(Math.Floor(extra4 * 1000) % 10);
+                    if (tercerDecimal223 == 5)
+                        extra4 = Math.Ceiling(extra4 * 100) / 100;
+                    decimal diferencia = Math.Round(Math.Round(extra4, 2) - Math.Round(extra_redondeado, 2), 2);
+                    decimal nice = importe_neto - redondeado;
+                    redondeado += diferencia;
+                    nice -= diferencia;
+                    importes -= diferencia;
+                    importe_imp -= diferencia;
+                    //decimal nice = importe_neto - redondeado; 
+                    //decimal diferencia = Math.Round(Math.Round(extra,2) - Math.Round(extra_redondeado,2), 2);
+                    //nice += diferencia;
+                    //redondeado -= diferencia;
+                    //importes += diferencia;
+                    impuestos = importe_imp * 0.16m;
+                    impuestos += importe_imp_8 * 0.08m;
+                    extra_redondeado += diferencia;
+                    ModificarExtra(Docto_ve_det, redondeado, nice);
+                }
+                else if (GlobalSettings.Instance.Desc_extra == 0)
+                {
+                    impuestos = importe_imp * 0.16m;
+                    impuestos += importe_imp_8 * 0.08m;
+                }
+                ModificarTotales(Math.Round(importes, 2), Math.Round(extra_redondeado, 2), impuestos);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con007.Close();
+            }
+        }
         public void UpdateQuery()
         {
-            FbConnection con8 = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+            FbConnection con8 = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
             try
             {
                 con8.Open();
 
                 // Utiliza parámetros para evitar la inyección de SQL
-                string query8 = "UPDATE DOCTOS_VE_DET SET UNIDADES = @UpdateValue, DSCTO_ART = @Descuento_articulo_neto, PRECIO_TOTAL_NETO = @Importe_total_neto WHERE DOCTO_VE_ID = @FolioId AND POSICION = @Posicion";
+                string query8 = "UPDATE DOCTOS_VE_DET SET UNIDADES = @UpdateValue, DSCTO_ART = @Descuento_articulo_neto, DSCTO_EXTRA = @Extra, PRECIO_TOTAL_NETO = @Importe_total_neto WHERE DOCTO_VE_ID = @FolioId AND POSICION = @Posicion";
                 FbCommand command8 = new FbCommand(query8, con8);
-
                 // Agrega los parámetros
                 //VALOR DE UNIDADES A ACTUALIZAR
                 command8.Parameters.AddWithValue("@UpdateValue", GlobalSettings.Instance.Update);
@@ -1303,17 +1737,80 @@ namespace Validación_de_Pedidos
                 decimal descuento_solicitado = (GlobalSettings.Instance.Importe_articulo_neto * GlobalSettings.Instance.UnidadesSolicitadas) * (GlobalSettings.Instance.Descuento_articulo_neto / 100);
                 decimal importe_neto_solicitado = (GlobalSettings.Instance.UnidadesSolicitadas * GlobalSettings.Instance.Importe_articulo_neto) - descuento_solicitado;
                 decimal importe_neto = (GlobalSettings.Instance.Update * GlobalSettings.Instance.Importe_articulo_neto) - descuento;
-                decimal diferecia = importe_neto_solicitado - importe_neto;
+                decimal chido = 0;
+                decimal extra = 0;
+                decimal bueno = 0;
+
+                if (GlobalSettings.Instance.Desc_extra != 0)
+                {
+                    //Descuento 40/100 = 0.4
+                    extra = (importe_neto / 100m) * GlobalSettings.Instance.Desc_extra;
+                    // extra = importe_neto / GlobalSettings.Instance.Desc_extra;
+                    int tercerDecimal22 = (int)(Math.Floor(extra * 1000) % 10);
+                    if (tercerDecimal22 == 5)
+                        extra = Math.Ceiling(extra * 100) / 100;
+                    //decimal extrasoli = importe_neto_solicitado / GlobalSettings.Instance.Desc_extra;
+                    decimal importe = GlobalSettings.Instance.Importe_articulo_neto * GlobalSettings.Instance.Update;
+                    bueno = importe - extra - Math.Round(descuento, 2);
+                    decimal des = GlobalSettings.Instance.Desc_extra / 100;
+                    chido = importe_neto * des;
+                    importe_neto *= 10000;
+                    decimal Nprice = importe_neto * 100;
+                    decimal nuevoImpuesto = Nprice - (importe_neto * GlobalSettings.Instance.Desc_extra);
+                    importe_neto = nuevoImpuesto / 1000000;
+                    //decimal imp_net_ = importe_neto_solicitado - extrasoli;
+                }
+
+                decimal importe_neto2 = GlobalSettings.Instance.Importearticuloeliminado - importe_neto;
+                decimal diferecia = importe_neto_solicitado - Math.Round(importe_neto, 2);
+                //decimal diferecia = importe_neto_solicitado - importe_neto;
+                decimal diferencia_desc_extra = GlobalSettings.Instance.Desc_extra_importe - chido;
+                //GlobalSettings.Instance.Desc_extra_importe -= diferencia_desc_extra;
+                decimal dif_ex = GlobalSettings.Instance.Desc_extra_ind - chido;
+                GlobalSettings.Instance.Desc_extra_importe -= dif_ex;
                 //VALOR DE FOLIO ID A EDITAR EN DOCTOS_VE_DET
                 command8.Parameters.AddWithValue("@FolioId", GlobalSettings.Instance.FolioId);
-                //VALOR DE LA POSICION DEL CODIGO
-                command8.Parameters.AddWithValue("@Posicion", GlobalSettings.Instance.Posicion);
-                //VALOR DE UNIDADES A ACTUALIZAR
-                command8.Parameters.AddWithValue("@Descuento_articulo_neto", descuento);
-                //VALOR DE UNIDADES A ACTUALIZAR
-                command8.Parameters.AddWithValue("@Importe_total_neto", importe_neto);
+                //int tercerDecimal = (int)(Math.Floor(chido * 1000) % 10);
+                //if (tercerDecimal == 5)
+                //    chido += 0.005m;
 
-                // Ejecuta la consulta de actualización
+
+                if (GlobalSettings.Instance.Desc_extra != 0)
+                {
+                    int tercerDecimal23 = (int)(Math.Floor(bueno * 1000) % 10);
+                    if (tercerDecimal23 == 5)
+                        bueno = Math.Ceiling(bueno * 100) / 100;
+                    decimal a = Math.Round(extra, 2);
+                    decimal b = Math.Round(descuento, 2);
+                    decimal c = Math.Round(bueno, 2);
+
+
+                    command8.Parameters.AddWithValue("@Extra", a);
+                    //VALOR DE LA POSICION DEL CODIGO
+                    command8.Parameters.AddWithValue("@Posicion", GlobalSettings.Instance.Posicion);
+                    //VALOR DE UNIDADES A ACTUALIZAR
+                    command8.Parameters.AddWithValue("@Descuento_articulo_neto", b);
+                    //VALOR DE UNIDADES A ACTUALIZAR
+                    command8.Parameters.AddWithValue("@Importe_total_neto", c);
+                    // Ejecuta la consulta de actualización
+
+                }
+                else
+                {
+                    decimal a = Math.Round(chido, 2);
+                    decimal b = Math.Round(descuento, 2);
+                    decimal c = Math.Round(importe_neto, 2);
+
+                    command8.Parameters.AddWithValue("@Extra", a);
+                    //VALOR DE LA POSICION DEL CODIGO
+                    command8.Parameters.AddWithValue("@Posicion", GlobalSettings.Instance.Posicion);
+                    //VALOR DE UNIDADES A ACTUALIZAR
+                    command8.Parameters.AddWithValue("@Descuento_articulo_neto", b);
+                    //VALOR DE UNIDADES A ACTUALIZAR
+                    command8.Parameters.AddWithValue("@Importe_total_neto", c);
+                    // Ejecuta la consulta de actualización
+                }
+
                 int rowsAffected = command8.ExecuteNonQuery();
 
                 if (rowsAffected == 0)
@@ -1328,9 +1825,13 @@ namespace Validación_de_Pedidos
                 {
                     GlobalSettings.Instance.Importe_Total = reader10.GetDecimal(26);
                     GlobalSettings.Instance.Impuesto_total = reader10.GetDecimal(29);
+                    //GlobalSettings.Instance.Impuesto_real = GlobalSettings.Instance.Importe_Total * 0.16m;
                 }
                 reader10.Close();
-
+                int tercerDecimal2 = (int)(Math.Floor(importe_neto2 * 1000) % 10);
+                if (tercerDecimal2 == 5)
+                    importe_neto2 = Math.Ceiling(importe_neto2 * 100) / 100;
+                decimal diferecia3 = importe_neto2;
                 //IMPUESTO
                 string query11 = "SELECT * FROM IMPUESTOS_ARTICULOS WHERE ARTICULO_ID = '" + GlobalSettings.Instance.Clave_articulo_id + "'";
                 FbCommand command11 = new FbCommand(query11, con8);
@@ -1352,7 +1853,7 @@ namespace Validación_de_Pedidos
                 }
                 reader12.Close();
 
-                string query9 = "UPDATE DOCTOS_VE SET IMPORTE_NETO = @Importe, TOTAL_IMPUESTOS = @Impuestos WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.FolioId + "';";
+                string query9 = "UPDATE DOCTOS_VE SET IMPORTE_NETO = @Importe, DSCTO_IMPORTE = @Desc_e, TOTAL_IMPUESTOS = @Impuestos WHERE DOCTO_VE_ID = '" + GlobalSettings.Instance.FolioId + "';";
                 FbCommand command9 = new FbCommand(query9, con8);
 
                 // Agrega los parámetros
@@ -1363,16 +1864,60 @@ namespace Validación_de_Pedidos
                     GlobalSettings.Instance.Impuesto_Total_Anterior = GlobalSettings.Instance.Impuesto_total;
 
                 }
-                GlobalSettings.Instance.Importe_Total -= diferecia;
+                decimal nice = 0;
+                decimal extra2 = 0;
+                decimal impuesto = 0;
+                if (GlobalSettings.Instance.Desc_extra_ind != 0)
+                {
+                    GlobalSettings.Instance.Importe_Total -= diferecia3;
+                }
+                else
+                {
+                    GlobalSettings.Instance.Importe_Total -= Math.Round(diferecia, 2);
+                }
                 if (GlobalSettings.Instance.Impuesto == "16% IVA ")
                 {
                     //decimal importe_impuesto = importe_neto_solicitado * 1.16m;
                     //decimal dif = (importe_impuesto) - (importe_neto * 1.16m);
-                    decimal dif = (diferecia * 0.16m);
-                    decimal difact = Math.Round(dif, 2);
-                    GlobalSettings.Instance.Impuesto_total -= difact;
+                    decimal dif = 0;
+                    decimal difact = 0;
+                    if (GlobalSettings.Instance.Desc_extra_ind != 0)
+                    {
+                        dif = (diferecia3 * 0.16m);
+                        difact = dif;
+                    }
+                    else
+                    {
+                        dif = (diferecia * 0.16m);
+                        difact = dif;
+                    }
+                    GlobalSettings.Instance.Impuesto_total -= Math.Round(difact, 2);
+                    //IMPUESTO SIN MODIFICACIONES EN EL DET
+                    GlobalSettings.Instance.Impuesto_real -= difact;
                     //GlobalSettings.Instance.Impuesto_total -= importe_neto;
                 }
+                else if (GlobalSettings.Instance.Impuesto == "IEPS 8%")
+                {
+                    //decimal importe_impuesto = importe_neto_solicitado * 1.16m;
+                    //decimal dif = (importe_impuesto) - (importe_neto * 1.16m);
+                    decimal dif = 0;
+                    decimal difact = 0;
+                    if (GlobalSettings.Instance.Desc_extra_ind != 0)
+                    {
+                        dif = (diferecia3 * 0.08m);
+                        difact = dif;
+                    }
+                    else
+                    {
+                        dif = (diferecia * 0.08m);
+                        difact = dif;
+                    }
+                    GlobalSettings.Instance.Impuesto_total -= Math.Round(difact, 2);
+                    //IMPUESTO SIN MODIFICACIONES EN EL DET
+                    GlobalSettings.Instance.Impuesto_real -= difact;
+                    //GlobalSettings.Instance.Impuesto_total -= importe_neto;
+                }
+
                 //else
                 //{
                 //    GlobalSettings.Instance.Impuesto_total = 0;
@@ -1386,8 +1931,23 @@ namespace Validación_de_Pedidos
                 //}
                 //GlobalSettings.Instance.Importe_Total += GlobalSettings.Instance.Importe_Total_Anterior;
                 //GlobalSettings.Instance.Impuesto_total += GlobalSettings.Instance.Impuesto_Total_Anterior;
-                command9.Parameters.AddWithValue("@Importe", GlobalSettings.Instance.Importe_Total);
-                command9.Parameters.AddWithValue("@Impuestos", GlobalSettings.Instance.Impuesto_total);
+                int tercerDecimal3 = (int)(Math.Floor(GlobalSettings.Instance.Desc_extra_importe * 1000) % 10);
+                if (tercerDecimal3 == 5)
+                    GlobalSettings.Instance.Desc_extra_importe = Math.Ceiling(GlobalSettings.Instance.Desc_extra_importe * 100) / 100;
+                if (GlobalSettings.Instance.Desc_extra_importe != 0)
+                {
+                    nice = SumarTodo();
+                    extra2 = SumarExtra();
+                    command9.Parameters.AddWithValue("@Desc_e", Math.Round(extra2, 2));
+                    command9.Parameters.AddWithValue("@Importe", Math.Round(nice, 2));
+                }
+                else
+                {
+                    command9.Parameters.AddWithValue("@Desc_e", Math.Round(GlobalSettings.Instance.Desc_extra_importe, 2));
+                    command9.Parameters.AddWithValue("@Importe", Math.Round(GlobalSettings.Instance.Importe_Total, 2));
+
+                }
+                command9.Parameters.AddWithValue("@Impuestos", Math.Round(GlobalSettings.Instance.Impuesto_real, 2));
                 // Ejecuta la consulta de actualización
                 rowsAffected = command9.ExecuteNonQuery();
 
@@ -1396,7 +1956,6 @@ namespace Validación_de_Pedidos
                     MessageBox.Show("No se pudo actualizar el importe", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-
                 //bool Find = false;
                 //// Objeto para leer los datos obtenidos
                 //FbDataReader reader0 = command9.ExecuteReader();
@@ -1422,7 +1981,7 @@ namespace Validación_de_Pedidos
         }
         public decimal ExistenciaValor(string articulo_id)
         {
-            FbConnection con = new FbConnection("User=SYSDBA;" + "Password=C0r1b423;" + "Database=D:\\Microsip datos\\PAPELERIA CORIBA CORNEJO.fdb;" + "DataSource=192.168.0.11;" + "Port=3050;" + "Dialect=3;" + "Charset=UTF8;");
+            FbConnection con = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
             try
             {
                 con.Open();
@@ -1431,7 +1990,8 @@ namespace Validación_de_Pedidos
 
                 // Parámetros de entrada
                 command.Parameters.Add("V_ARTICULO_ID", FbDbType.Integer).Value = articulo_id;
-                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108404;
+                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108404; //PERI
+                //command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108405; culiacan
                 command.Parameters.Add("V_FECHA", FbDbType.Date).Value = DateTime.Today;
                 command.Parameters.Add("V_ES_ULTIMO_COSTO", FbDbType.Char).Value = 'S';
                 command.Parameters.Add("V_SUCURSAL_ID", FbDbType.Integer).Value = 0;
@@ -1452,7 +2012,8 @@ namespace Validación_de_Pedidos
 
                 // Parámetros de entrada
                 command2.Parameters.Add("V_ARTICULO_ID", FbDbType.Integer).Value = articulo_id;
-                command2.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108403;
+                command2.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108403; //PERI
+                //command2.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108405; culiacan
                 command2.Parameters.Add("V_FECHA", FbDbType.Date).Value = DateTime.Today;
                 command2.Parameters.Add("V_ES_ULTIMO_COSTO", FbDbType.Char).Value = 'S';
                 command2.Parameters.Add("V_SUCURSAL_ID", FbDbType.Integer).Value = 0;
@@ -1490,6 +2051,42 @@ namespace Validación_de_Pedidos
                 con.Close();
             }
         }
+        public void Validar()
+        {
+            FbConnection con = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con.Open();
+                // Utiliza parámetros para evitar la inyección de SQL
+                string query8 = "UPDATE LIBRES_PED_VE SET VERIFICADO_X_SOFTWARE = @UpdateValue WHERE DOCTO_VE_ID = @FolioId";
+                FbCommand command8 = new FbCommand(query8, con);
+
+                // Agrega los parámetros
+                //VALOR DE UNIDADES A ACTUALIZAR
+                command8.Parameters.AddWithValue("@UpdateValue", 1);
+                //VALOR DE FOLIO ID A EDITAR EN DOCTOS_VE_DET
+                command8.Parameters.AddWithValue("@FolioId", GlobalSettings.Instance.FolioId);
+                // Ejecuta la consulta de actualización
+                int rowsAffected = command8.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    MessageBox.Show("No se pudo actualizar el pedido", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con.Close();
+            }
+        }
         private void BtnPDF_Click(object sender, EventArgs e)
         {
             if (Articulos.Count == 0)
@@ -1509,7 +2106,7 @@ namespace Validación_de_Pedidos
                 if (Articulos[i].Solicitado > Articulos[i].Recibido)
                 {
                     decimal existencia = ExistenciaValor(Articulos[i].ArticuloId.ToString());
-                    if(existencia >= Articulos[i].Pendiente)
+                    if (existencia >= Articulos[i].Pendiente)
                     {
                         bandera = true;
                         string mensajepred = Articulos[i].Codigo + " ------- " + "Existencia: " + existencia + "\n";
@@ -1528,8 +2125,10 @@ namespace Validación_de_Pedidos
             {
                 return;
             }
+            Validar();
             string Hoy = DateTime.Now.ToString("d-M-yy");
-            string filePath = "\\\\SRVPRINCIPAL\\incompletosPedidos\\ArticulosIncompletos " + Hoy + ".xlsx";
+            string filePath = "\\\\SRVPRINCIPAL\\incompletosPedidos\\ArticulosIncompletos " + Hoy + ".xlsx"; //PERI
+            //string filePath = "C:\\incompletosPedidos\\ArticulosIncompletos " + Hoy + ".xlsx"; culiacan
             bool fileExist = File.Exists(filePath);
             Document doc = new Document();
             try
@@ -1713,7 +2312,7 @@ namespace Validación_de_Pedidos
                     }
                 }
             }
-
+            bool banderaModificacion = false;
             for (int i = 0; i < Tabla.Rows.Count; i++)
             {
                 double.TryParse(Tabla[3, i].Value.ToString(), out double valorColumna3);
@@ -1742,8 +2341,10 @@ namespace Validación_de_Pedidos
                                         GlobalSettings.Instance.UnidadesSolicitadas = Articulos[k].Solicitado;
                                         GlobalSettings.Instance.Clave_articulo_id = Articulos[k].Clave;
                                         GlobalSettings.Instance.Importearticuloeliminado = Articulos[k].Importe_total_articuloeliminado;
+                                        GlobalSettings.Instance.Desc_extra_ind = Articulos[k].Descuento_extra_individual;
                                     }
                                 }
+                                banderaModificacion = true;
                                 EliminarQuery();
                             }
                             table4.AddCell(Tabla[j, i].Value.ToString());
@@ -1765,6 +2366,8 @@ namespace Validación_de_Pedidos
                                         GlobalSettings.Instance.Importe_articulo_neto = Articulos[k].Importe_neto_articulo;
                                         GlobalSettings.Instance.UnidadesSolicitadas = Articulos[k].Solicitado;
                                         GlobalSettings.Instance.Clave_articulo_id = Articulos[k].Clave;
+                                        GlobalSettings.Instance.Importearticuloeliminado = Articulos[k].Importe_total_articuloeliminado;
+                                        GlobalSettings.Instance.Desc_extra_ind = Articulos[k].Descuento_extra_individual;
                                     }
                                 }
                             }
@@ -1774,6 +2377,7 @@ namespace Validación_de_Pedidos
                                 GlobalSettings.Instance.Update = Decimal.Parse(Tabla[4, i].Value.ToString());
                                 UpdateQuery();
                                 GlobalSettings.Instance.PrimerImporte += 1;
+                                banderaModificacion = true;
 
                             }
                             tabla2 = true;
@@ -1795,7 +2399,9 @@ namespace Validación_de_Pedidos
                                     GlobalSettings.Instance.Descuento_articulo_neto = Articulos[k].Descuento_porcentaje;
                                     GlobalSettings.Instance.Importe_articulo_neto = Articulos[k].Importe_neto_articulo;
                                     GlobalSettings.Instance.UnidadesSolicitadas = Articulos[k].Solicitado;
+                                    GlobalSettings.Instance.Importearticuloeliminado = Articulos[k].Importe_total_articuloeliminado;
                                     GlobalSettings.Instance.Clave_articulo_id = Articulos[k].Clave;
+                                    GlobalSettings.Instance.Desc_extra_ind = Articulos[k].Descuento_extra_individual;
                                 }
                             }
                         }
@@ -1804,11 +2410,16 @@ namespace Validación_de_Pedidos
                             //MessageBox.Show(Tabla[4, i].Value.ToString());
                             GlobalSettings.Instance.Update = Decimal.Parse(Tabla[4, i].Value.ToString());
                             UpdateQuery();
+                            banderaModificacion = true;
                         }
                         tabla3 = true;
                         cont3++;
                     }
                 }
+            }
+            if (banderaModificacion == true)
+            {
+                SumarTotales();
             }
             Paragraph Name = new Paragraph("PEDIDO: " + TxtPedido.Text);
             Name.Alignment = Element.ALIGN_CENTER;
@@ -1868,6 +2479,34 @@ namespace Validación_de_Pedidos
             doc.Add(emptyParagraph);
             // Cerrar el documento
             doc.Close();
+            //TXT
+            string carpeta = @"C:\DatosPedidos";
+            string rutaArchivo = Path.Combine(carpeta, TxtPedido.Text + ".txt");
+            try
+            {
+                // Verificar si la carpeta existe, si no, crearla
+                if (!Directory.Exists(carpeta))
+                {
+                    Directory.CreateDirectory(carpeta);
+                }
+
+                // Crear un nuevo archivo de texto y escribir el contenido
+                using (StreamWriter writer = new StreamWriter(rutaArchivo))
+                {
+                    for (int i = 0; i < Articulos.Count; ++i)
+                    {
+                        writer.WriteLine(Articulos[i].Id + "," + Articulos[i].Recibido);
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al guardar el archivo Txt: " + ex.Message);
+            }
+            //FIN TXT
+            if (Cb_Descuentos.Checked == true)
+                ValidarC(GlobalSettings.Instance.Docto_Ve_Id);
             Process.Start(new ProcessStartInfo(fileName) { UseShellExecute = true });
             TxtPedido.Text = string.Empty;
             TxtCodigo.Text = string.Empty;
@@ -1877,6 +2516,12 @@ namespace Validación_de_Pedidos
             Lb_renglones.Text = "0";
             Lb_Incompletos.Text = "0";
             GlobalSettings.Instance.Incompletos = 0;
+            GlobalSettings.Instance.Impuesto_real = 0;
+            GlobalSettings.Instance.Impuesto_total = 0;
+            GlobalSettings.Instance.Impuesto = "";
+            GlobalSettings.Instance.Desc_extra_importe = 0;
+            GlobalSettings.Instance.Desc_extra_ind = 0;
+            Cb_Descuentos.Checked = true;
             Articulos.Clear();
             Tabla.Rows.Clear();
             Tabla.Refresh();
@@ -1917,6 +2562,15 @@ namespace Validación_de_Pedidos
             {
                 BtnPDF_Click(sender, e);
             }
+            if (e.Control && e.Alt && e.KeyCode == Keys.C)
+            {
+                DialogResult result = MessageBox.Show("Vas a cargar un archivo Txt\n ¿Deseas continuar?", "Advertencia", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                if (result == DialogResult.Cancel)
+                {
+                    return;
+                }
+                Cargar_Click(sender, e);
+            }
             if (e.Control && e.KeyCode == Keys.R)
             {
                 BtnCodigo.BackColor = System.Drawing.Color.Red;
@@ -1931,6 +2585,50 @@ namespace Validación_de_Pedidos
                 label8.ForeColor = System.Drawing.Color.Red;
                 Lb_Incompletos.ForeColor = System.Drawing.Color.Red;
                 Lb_renglones.ForeColor = System.Drawing.Color.Red;
+                Cb_Descuentos.ForeColor = System.Drawing.Color.Red;
+                Cargar.ForeColor = System.Drawing.Color.Red;
+                Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.Red;
+                Tabla.Refresh();
+
+            }
+            if (e.Alt && e.KeyCode == Keys.J)
+            {
+                BtnCodigo.BackColor = System.Drawing.Color.HotPink;
+                BtnPDF.BackColor = System.Drawing.Color.HotPink;
+                BtnPedido.BackColor = System.Drawing.Color.HotPink;
+                label1.ForeColor = System.Drawing.Color.HotPink;
+                label2.ForeColor = System.Drawing.Color.HotPink;
+                label3.ForeColor = System.Drawing.Color.HotPink;
+                label4.ForeColor = System.Drawing.Color.HotPink;
+                label5.ForeColor = System.Drawing.Color.HotPink;
+                label6.ForeColor = System.Drawing.Color.HotPink;
+                label8.ForeColor = System.Drawing.Color.HotPink;
+                Lb_Incompletos.ForeColor = System.Drawing.Color.HotPink;
+                Lb_renglones.ForeColor = System.Drawing.Color.HotPink;
+                Cargar.ForeColor = System.Drawing.Color.HotPink;
+                Cb_Descuentos.ForeColor = System.Drawing.Color.HotPink;
+                Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.HotPink;
+                Tabla.Refresh();
+
+            }
+            if (e.Alt && e.KeyCode == Keys.V)
+            {
+                BtnCodigo.BackColor = System.Drawing.Color.BlueViolet;
+                BtnPDF.BackColor = System.Drawing.Color.BlueViolet;
+                BtnPedido.BackColor = System.Drawing.Color.BlueViolet;
+                label1.ForeColor = System.Drawing.Color.BlueViolet;
+                label2.ForeColor = System.Drawing.Color.BlueViolet;
+                label3.ForeColor = System.Drawing.Color.BlueViolet;
+                label4.ForeColor = System.Drawing.Color.BlueViolet;
+                label5.ForeColor = System.Drawing.Color.BlueViolet;
+                label6.ForeColor = System.Drawing.Color.BlueViolet;
+                label8.ForeColor = System.Drawing.Color.BlueViolet;
+                Lb_Incompletos.ForeColor = System.Drawing.Color.BlueViolet;
+                Lb_renglones.ForeColor = System.Drawing.Color.BlueViolet;
+                Cb_Descuentos.ForeColor = System.Drawing.Color.BlueViolet;
+                Cargar.ForeColor = System.Drawing.Color.BlueViolet;
+                Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.BlueViolet;
+                Tabla.Refresh();
 
             }
             if (e.Control && e.KeyCode == Keys.A)
@@ -1945,9 +2643,12 @@ namespace Validación_de_Pedidos
                 label5.ForeColor = System.Drawing.Color.CadetBlue;
                 label6.ForeColor = System.Drawing.Color.CadetBlue;
                 label8.ForeColor = System.Drawing.Color.CadetBlue;
+                Cb_Descuentos.ForeColor = System.Drawing.Color.CadetBlue;
                 Lb_Incompletos.ForeColor = System.Drawing.Color.CadetBlue;
                 Lb_renglones.ForeColor = System.Drawing.Color.CadetBlue;
-
+                Cargar.ForeColor = System.Drawing.Color.CadetBlue;
+                Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.CadetBlue;
+                Tabla.Refresh();
             }
             if (e.Control && e.KeyCode == Keys.P)
             {
@@ -1963,6 +2664,10 @@ namespace Validación_de_Pedidos
                 label8.ForeColor = System.Drawing.Color.Fuchsia;
                 Lb_Incompletos.ForeColor = System.Drawing.Color.Fuchsia;
                 Lb_renglones.ForeColor = System.Drawing.Color.Fuchsia;
+                Cb_Descuentos.ForeColor = System.Drawing.Color.Fuchsia;
+                Cargar.ForeColor = System.Drawing.Color.Fuchsia;
+                Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.Fuchsia;
+                Tabla.Refresh();
 
             }
             if (e.Control && e.KeyCode == Keys.I)
@@ -1995,6 +2700,389 @@ namespace Validación_de_Pedidos
             {
                 e.KeyChar = Char.ToUpper(e.KeyChar);
             }
+        }
+        public string Cliente(string Cliente_Id)
+        {
+            FbConnection con1a = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con1a.Open();
+                string query1 = "SELECT * FROM CLIENTES WHERE CLIENTE_ID = '" + Cliente_Id + "'";
+                FbCommand command1 = new FbCommand(query1, con1a);
+                FbDataReader reader1 = command1.ExecuteReader();
+                if (reader1.Read())
+                {
+                    string nombre = reader1.GetString(1);
+                    reader1.Close();
+                    return nombre;
+
+                }
+                else
+                {
+                    MessageBox.Show("Folio no encontrado", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return "CLIENTE NO ENCONTRADO";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return "CLIENTE NO ENCONTRADO";
+            }
+            finally
+            {
+                con1a.Close();
+            }
+        }
+        public decimal ImpuestoC(string Articulo_Id)
+        {
+            FbConnection con2a = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con2a.Open();
+                string Clave_Impuesto = "";
+                string impuesto = "";
+                string query3 = "SELECT * FROM IMPUESTOS_ARTICULOS WHERE ARTICULO_ID = '" + Articulo_Id + "'";
+                FbCommand command3 = new FbCommand(query3, con2a);
+                FbDataReader reader3 = command3.ExecuteReader();
+                if (reader3.Read())
+                {
+                    Clave_Impuesto = reader3.GetString(2);
+                    //MessageBox.Show(GlobalSettings.Instance.Clave_impuesto);
+                }
+                reader3.Close();
+                //QUERI 4 PARA BUSCAR IMPORTE DEL ARTICULO
+
+                string query4 = "SELECT * FROM IMPUESTOS WHERE IMPUESTO_ID = '" + Clave_Impuesto + "'";
+                FbCommand command4 = new FbCommand(query4, con2a);
+                FbDataReader reader4 = command4.ExecuteReader();
+                if (reader4.Read())
+                {
+                    impuesto = reader4.GetString(2);
+
+                }
+                reader4.Close();
+                if (impuesto == "16% IVA ")
+                    return (decimal)1.16;
+                else if (impuesto == "IEPS 8%")
+                    return (decimal)1.08;
+                else
+                    return 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return (decimal)1.16;
+            }
+            finally
+            {
+                con2a.Close();
+            }
+        }
+        public void UpdateIndividual()
+        {
+            FbConnection con3a = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+
+                con3a.Open();
+                string query8 = "UPDATE DOCTOS_VE SET DSCTO_PCTJE = @Desc, DSCTO_IMPORTE = @Descimp  WHERE DOCTO_VE_ID = @Docto_Det";
+                FbCommand command8 = new FbCommand(query8, con3a);
+
+                //decimal round = Decimal.Round(importeImpuesto, 4);
+                //decimal round2 = Decimal.Round(nuevoPrecio, 4);
+                command8.Parameters.AddWithValue("@Descimp", 0);
+                command8.Parameters.AddWithValue("@Desc", 0);
+                //VALOR DE FOLIO ID A EDITAR EN DOCTOS_VE_DET
+                command8.Parameters.AddWithValue("@Docto_Det", GlobalSettings.Instance.Docto_Ve_Id);
+                // Ejecuta la consulta de actualización
+                int rowsAffected = command8.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    MessageBox.Show("No se pudo actualizar el pedido", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con3a.Close();
+            }
+        }
+        public void Update(string Docto_Ve_Det_Id, decimal Precio_neto, decimal Piezas, decimal impuesto, decimal Precio_Total_Neto, decimal Descuento)
+        {
+            FbConnection con4a = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con4a.Open();
+                string query8 = "UPDATE DOCTOS_VE_DET SET PCTJE_DSCTO = @Porcentaje_descuento,PCTJE_DSCTO_CLI = @Porcentaje_descuento_cli, DSCTO_ART = @Desc_art, DSCTO_EXTRA = @Desc_extra, PRECIO_UNITARIO = @NuevoPrecio WHERE DOCTO_VE_DET_ID = @Docto_Det";
+                FbCommand command8 = new FbCommand(query8, con4a);
+                //VALOR DE UNIDADES A ACTUALIZAR
+                //MessageBox.Show(Precio_Total_Neto.ToString());
+                decimal nuevoPrecio = (Precio_Total_Neto / Piezas);
+                decimal descuento_decimal = Descuento / 100;
+                //Descuento 40/100 = 0.4
+                //Precio_neto *= 10000;
+                //decimal Nprice = Precio_neto * 100;
+                //decimal nuevoImpuesto = Nprice - (Precio_neto * Descuento);
+                //decimal chido = nuevoImpuesto / 1000000;
+                decimal chido = Precio_Total_Neto / Piezas;
+                decimal chido2 = 0;
+                //if (GlobalSettings.Instance.Desc_extra != 0)
+                //{
+                //    chido *= 10000;
+                //    decimal Nprice2 = chido * 100;
+                //    decimal nuevoImpuesto2 = Nprice2 - (chido * GlobalSettings.Instance.Desc_extra);
+                //    chido2 = nuevoImpuesto2 / 1000000;
+                //}
+                //decimal truncado = Math.Truncate(chido * 1000) / 1000;
+                //decimal round = Decimal.Round(importeImpuesto, 4);
+                //decimal round2 = Decimal.Round(nuevoPrecio, 4);
+                command8.Parameters.AddWithValue("@Porcentaje_descuento", 0);
+                command8.Parameters.AddWithValue("@Porcentaje_descuento_cli", 0);
+                if (GlobalSettings.Instance.Desc_extra != 0)
+                {
+                    command8.Parameters.AddWithValue("@NuevoPrecio", chido);
+                    UpdateIndividual();
+                }
+                else
+                {
+                    command8.Parameters.AddWithValue("@NuevoPrecio", chido);
+
+                }
+                //command8.Parameters.AddWithValue("@ImporteImpuesto", Math.Round(chido, 2));
+                command8.Parameters.AddWithValue("@Desc_art", 0);
+                command8.Parameters.AddWithValue("@Desc_extra", 0);
+                //VALOR DE FOLIO ID A EDITAR EN DOCTOS_VE_DET
+                command8.Parameters.AddWithValue("@Docto_Det", Docto_Ve_Det_Id);
+                // Ejecuta la consulta de actualización
+                int rowsAffected = command8.ExecuteNonQuery();
+
+                if (rowsAffected == 0)
+                {
+                    MessageBox.Show("No se pudo actualizar el pedido", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con4a.Close();
+            }
+        }
+        public void ValidarC(string Docto_Ve_Id)
+        {
+
+            FbConnection con5a = new FbConnection("User=" + GlobalSettings.Instance.User + ";" + "Password=" + GlobalSettings.Instance.Pw + ";" + "Database=" + GlobalSettings.Instance.Direccion + ";" + "DataSource=" + GlobalSettings.Instance.Ip + ";" + "Port=" + GlobalSettings.Instance.Puerto + ";" + "Dialect=3;" + "Charset=UTF8;");
+            try
+            {
+                con5a.Open();
+                // Utiliza parámetros para evitar la inyección de SQL
+                string query7 = "SELECT * FROM DOCTOS_VE_DET  WHERE DOCTO_VE_ID = '" + Docto_Ve_Id + "';";
+                FbCommand command0 = new FbCommand(query7, con5a);
+                FbDataReader reader0 = command0.ExecuteReader();
+                string Docto_Ve_Det_Id = "0";
+                string Articulo_Id;
+                decimal Piezas = 0;
+                decimal Precio_total_neto = 0;
+                decimal impuesto = 0;
+                decimal sumatoria = 0;
+                decimal Precio_neto = 0;
+                decimal sumatoriai = 0;
+                decimal sumatorian = 0;
+                decimal Descuento = 0;
+                string Codigo = "";
+                int contador = 0;
+                string carpeta = @"C:\DatosVentasSurtido";
+                string rutaArchivo = Path.Combine(carpeta, TxtPedido.Text + ".txt");
+                try
+                {
+                    // Verificar si la carpeta existe, si no, crearla
+                    if (!Directory.Exists(carpeta))
+                    {
+                        Directory.CreateDirectory(carpeta);
+                    }
+
+                    // Crear un nuevo archivo de texto y escribir el contenido
+                    using (StreamWriter writer = new StreamWriter(rutaArchivo))
+                    {
+                        while (reader0.Read())
+                        {
+                            Docto_Ve_Det_Id = reader0.GetString(0);
+                            Articulo_Id = reader0.GetString(3);
+                            Codigo = reader0.GetString(2);
+                            Piezas = reader0.GetDecimal(4);
+                            Precio_neto = reader0.GetDecimal(8);
+                            Descuento = reader0.GetDecimal(9);
+                            Precio_total_neto = reader0.GetDecimal(15);
+                            //impuesto = Impuesto(Articulo_Id);
+                            Update(Docto_Ve_Det_Id, Precio_neto, Piezas, impuesto, Precio_total_neto, Descuento);
+                            writer.WriteLine(Codigo + "," + Piezas);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error al guardar el archivo Txt: " + ex.Message);
+                }
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Se perdió la conexión :( , contacta a 06 o intenta de nuevo", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.ToString());
+                return;
+            }
+            finally
+            {
+                con5a.Close();
+            }
+        }
+
+        private void Cargar_Click(object sender, EventArgs e)
+        {
+            if (Cancelado.Text == string.Empty)
+            {
+                MessageBox.Show("Ingresa un folio correcto", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            string carpeta = @"C:\DatosPedidos";
+            string rutaArchivo = Path.Combine(carpeta, Cancelado.Text + ".txt");
+            if (File.Exists(rutaArchivo))
+            {
+                using (StreamReader reader = new StreamReader(rutaArchivo))
+                {
+                    string line;
+
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        // Dividir la línea por un separador (por ejemplo, una coma)
+                        string[] parts = line.Split(',');
+                        int id = int.Parse(parts[0]);
+                        decimal cantidad = decimal.Parse(parts[1]);
+                        for (int i = 0; i < Articulos.Count; ++i)
+                        {
+                            if (Articulos[i].Id == id)
+                            {
+                                //Articulos[i].Recibido = recibido;
+                                //ejecutar(recibido, id);
+                                bool banderaincompleto = false;
+                                bool temporal = false;
+                                bool temporal2 = false;
+                                decimal prueba;
+                                bool bandera = false;
+                                bool regresar = false;
+                                prueba = Articulos[i].Pendiente - cantidad;
+                                if (prueba == 0 && Articulos[i].Recibido > 0)
+                                    temporal = true;
+                                if (prueba == 0)
+                                    bandera = true;
+                                if ((prueba) >= 1 && Articulos[i].Recibido == 0)
+                                    banderaincompleto = true;
+                                Articulos[i].Recibido += cantidad;
+                                Articulos[i].Pendiente -= cantidad;
+
+                                if (Articulos[i].Pendiente < 0)
+                                    Articulos[i].Pendiente = 0;
+                                List<int> ListaTabla = new List<int>();
+                                if (bandera == true)
+                                {
+                                    GlobalSettings.Instance.Renglones--;
+                                    Lb_renglones.Text = GlobalSettings.Instance.Renglones.ToString();
+                                    bandera = false;
+                                }
+                                if (temporal == true)
+                                {
+                                    GlobalSettings.Instance.Incompletos--;
+                                    Lb_Incompletos.Text = GlobalSettings.Instance.Incompletos.ToString();
+                                    GlobalSettings.Instance.Renglones++;
+                                    Lb_renglones.Text = GlobalSettings.Instance.Renglones.ToString();
+                                    bandera = false;
+                                }
+                                if (regresar == true)
+                                {
+                                    GlobalSettings.Instance.Incompletos--;
+                                    Lb_Incompletos.Text = GlobalSettings.Instance.Incompletos.ToString();
+                                    regresar = false;
+                                }
+                                if (temporal2 == true)
+                                {
+                                    GlobalSettings.Instance.Incompletos++;
+                                    Lb_Incompletos.Text = GlobalSettings.Instance.Incompletos.ToString();
+                                }
+
+                                //ORDENAR
+                                for (int j = 0; j < Articulos.Count; ++j)
+                                {
+                                    ListaTabla.Add(int.Parse(Tabla.Rows[j].Cells[0].Value.ToString()));
+                                }
+                                Tabla.Rows.Clear();
+                                DataGridViewRowCollection rows = Tabla.Rows;
+                                string comentario;
+                                for (int k = 0; k < Articulos.Count; ++k)
+                                {
+                                    int a = 1;
+                                    if (ListaTabla[k] != k + 1)
+                                    {
+                                        a = ListaTabla[k] - k;
+                                    }
+                                    if (Articulos[ListaTabla[k] - a].Nota != "")
+                                    {
+                                        comentario = "Ver";
+                                    }
+                                    else
+                                    {
+                                        comentario = string.Empty;
+                                    }
+                                    rows.Add(Articulos[ListaTabla[k] - a].Id, Articulos[ListaTabla[k] - a].Codigo, Articulos[ListaTabla[k] - a].Descripcion, Articulos[ListaTabla[k] - a].Solicitado, Articulos[ListaTabla[k] - a].Recibido, comentario, Articulos[ListaTabla[k] - a].Pendiente);
+                                    DataGridViewRow row = Tabla.Rows[k];
+                                    if (Articulos[ListaTabla[k] - a].Solicitado - Articulos[ListaTabla[k] - a].Recibido > 0 && Articulos[ListaTabla[k] - a].Recibido != 0)
+                                    {
+                                        row.DefaultCellStyle.BackColor = System.Drawing.Color.LightBlue;
+                                        if (banderaincompleto == true && temporal == false)
+                                        {
+                                            GlobalSettings.Instance.Incompletos++;
+                                            Lb_Incompletos.Text = GlobalSettings.Instance.Incompletos.ToString();
+                                            banderaincompleto = false;
+                                            GlobalSettings.Instance.Renglones--;
+                                            Lb_renglones.Text = GlobalSettings.Instance.Renglones.ToString();
+                                            bandera = false;
+                                        }
+                                    }
+                                    else if (Articulos[ListaTabla[k] - a].Solicitado - Articulos[ListaTabla[k] - a].Recibido == 0)
+                                        row.DefaultCellStyle.BackColor = System.Drawing.Color.LightGreen;
+                                    else if (Articulos[ListaTabla[k] - a].Solicitado - Articulos[ListaTabla[k] - a].Recibido < 0)
+                                    {
+                                        row.DefaultCellStyle.BackColor = System.Drawing.Color.Red;
+                                        row.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                    }
+                }
+            }
+            else
+                MessageBox.Show("No existe un archivo con ese folio", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+
         }
     }
 }

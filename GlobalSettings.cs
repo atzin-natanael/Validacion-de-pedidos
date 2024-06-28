@@ -9,6 +9,12 @@ namespace Validación_de_Pedidos
     public class GlobalSettings
     {
         private static GlobalSettings instance;
+        public string Ip { get; set; }
+        public string Puerto { get; set; }
+        public string Direccion { get; set; }
+        public string User { get; set; }
+        public string Pw { get; set; }
+        public List<string> Config { get; set; }
         public string Name { get; set; }
         public decimal Contenido {  get; set; }
         public string filepath { get; set; }
@@ -33,6 +39,8 @@ namespace Validación_de_Pedidos
         public decimal Importe_Total_Anterior { get; set; }
         public decimal Impuesto_Total_Anterior { get; set; }
         public decimal Importearticuloeliminado { get; set; }
+        public decimal Impuesto_real { get; set; }
+        public decimal Importe_real { get; set; }
         public int Incompletos { get; set; }
         public bool lastchance {  get; set; }
         public string Vendedora { get; set; }
@@ -44,9 +52,14 @@ namespace Validación_de_Pedidos
         public List<string> OficialCodigo { get; set; }
         public bool Editar { get; set; }
         public int PrimerImporte { get; set; }
+        public decimal Desc_extra { get; set; }
+        public decimal Desc_extra_importe { get; set; }
+        public decimal Desc_extra_ind { get; set; }
+        public string Docto_Ve_Id { get; set; }
         private GlobalSettings()
         {
             OficialCodigo = new List<string>();
+            Config = new List<string>();
 
         }
         public static GlobalSettings Instance
@@ -77,6 +90,7 @@ namespace Validación_de_Pedidos
         public decimal Descuento_porcentaje { get; set; }
         public decimal Importe_neto_articulo { get; set; }
         public decimal Importe_total_articuloeliminado { get; set; }
+        public decimal Descuento_extra_individual {  get; set; }
 
     }
 }
