@@ -171,7 +171,7 @@ namespace Validación_de_Pedidos
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             GlobalSettings.Instance.filepath = desktopPath + "\\" + TxtPedido.Text + ".txt";
             string Folio_Mod = TxtPedido.Text;
-            if (Folio_Mod[1] == 'O' || Folio_Mod[1] == 'E' || Folio_Mod[1] == 'P')
+            if (Folio_Mod[1] == 'O' || Folio_Mod[1] == 'E' || Folio_Mod[1] == 'P' || Folio_Mod[1] == 'M' || Folio_Mod[1] == 'A')
             {
                 int cont = 9 - Folio_Mod.Length;
                 string prefix = Folio_Mod.Substring(0, 2);
