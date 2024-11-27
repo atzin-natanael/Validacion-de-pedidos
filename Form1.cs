@@ -19,6 +19,8 @@ using System.Media;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using System.Reflection;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using System.Net.Mail;
+using System.Net;
 
 namespace Validación_de_Pedidos
 {
@@ -217,6 +219,7 @@ namespace Validación_de_Pedidos
                     GlobalSettings.Instance.VendedorId = reader0.GetString(40);
                     GlobalSettings.Instance.Desc_extra = reader0.GetDecimal(16);
                     GlobalSettings.Instance.Desc_extra_importe = reader0.GetDecimal(17);
+                    GlobalSettings.Instance.Vendedor = reader0.GetString(40);
                     Find = true;
                 }
                 else
@@ -452,10 +455,6 @@ namespace Validación_de_Pedidos
                 con.Close();
                 BtnPDF.Enabled = true;
             }
-        }
-
-        private void Tabla_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
-        {
         }
 
 
@@ -2469,11 +2468,17 @@ namespace Validación_de_Pedidos
                 doc.Add(contador4);
                 doc.Add(emptyParagraph2);
             }
+            bool faltantes = false;
             if (tabla2 == false && tabla3 == false && tabla4 == false)
             {
                 Paragraph completo = new Paragraph("EL PEDIDO ESTÁ COMPLETO");
                 completo.Alignment = Element.ALIGN_CENTER;
                 doc.Add(completo);
+            }
+            else
+            {
+                //ENVIAR CORREO 
+                faltantes = true;    
             }
             //doc.Add(cell4);
             doc.Add(emptyParagraph);
@@ -2507,6 +2512,36 @@ namespace Validación_de_Pedidos
             //FIN TXT
             if (Cb_Descuentos.Checked == true)
                 ValidarC(GlobalSettings.Instance.Docto_Ve_Id);
+            if (faltantes == true)
+            {
+                try
+                {
+                    // Configura los detalles del remitente y destinatario
+                    MailMessage mensaje = new MailMessage();
+                    mensaje.From = new MailAddress("faltantes@papeleriacornejo.com"); // Tu dirección de correo
+                    string Vendedor = RevisarVendedor(GlobalSettings.Instance.Vendedor);
+                    mensaje.To.Add(Vendedor); // Destinatario
+                    mensaje.Subject = "Faltante de Pedido "+TxtPedido.Text;
+                    mensaje.Body = "SURTIDOR: "+Cb_Surtidor.Text;
+                    string Pdf = fileName;
+                    Attachment adjunto = new Attachment(Pdf);
+                    mensaje.Attachments.Add(adjunto);
+                    // Desactiva la validación del certificado para pruebas (no recomendado para producción)
+                    System.Net.ServicePointManager.ServerCertificateValidationCallback =
+                        (sender, certificate, chain, sslPolicyErrors) => true;
+
+                    // Configuración del cliente SMTP (usando Gmail como ejemplo)
+                    SmtpClient clienteSmtp = new SmtpClient("smtp.papeleriacornejo.com", 587); // Servidor SMTP y puerto
+                    clienteSmtp.Credentials = new NetworkCredential("faltantes@papeleriacornejo.com", "Cornejo2024@"); // Credenciales
+                    clienteSmtp.EnableSsl = true; // SSL para una conexión segura
+                    // Envía el correo
+                    clienteSmtp.Send(mensaje);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error.", ex.Message);
+                }
+            }
             Process.Start(new ProcessStartInfo(fileName) { UseShellExecute = true });
             TxtPedido.Text = string.Empty;
             TxtCodigo.Text = string.Empty;
@@ -2528,7 +2563,46 @@ namespace Validación_de_Pedidos
             TxtPedido.Focus();
 
         }
+        public string RevisarVendedor(string Vendedor)
+        {
+            string archivo = "\\\\SRVPRINCIPAL\\Vendedores\\VENDEDORES.xlsx";
+            using (SLDocument documento3 = new SLDocument(archivo))
+            {
+                int filas = documento3.GetWorksheetStatistics().NumberOfRows;
+                for (int i = 1; i < filas + 1; ++i)
+                {
+                    string id = documento3.GetCellValueAsString("A" + i);
+                    string correo = documento3.GetCellValueAsString("C" + i);
+                    if (Vendedor == id)
+                    {
+                        return correo;
+                    }
+                }
+                return "npacheco@papeleriacornejo.com";
+            }
+            //using (var workbook = new XLWorkbook(archivo))
+            //{
+            //    // Seleccionar la primera hoja de trabajo
+            //    var worksheet = workbook.Worksheet(1);
 
+            //    // Leer las celdas
+            //    int row = 1;
+
+            //    // Loop mientras haya datos en la primera columna de cada fila
+            //    while (!worksheet.Cell(row, 1).IsEmpty())
+            //    {
+            //        // Leer datos de una columna (por ejemplo, columna A y B)
+            //        string id = worksheet.Cell(row, 1).GetString(); // Columna A
+            //        string correo = worksheet.Cell(row, 3).GetString(); // Columna B
+            //        if(Vendedor == id)
+            //        {
+            //            return correo;
+            //        }
+            //        row++; 
+            //    }
+            //    return "npacheco@papeleriacornejo.com";
+            //}
+        }
         private void Cb_Surtidor_Leave(object sender, EventArgs e)
         {
             if (!nombresArray.Contains(Cb_Surtidor.Text) && Cb_Surtidor.Text != "")

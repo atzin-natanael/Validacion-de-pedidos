@@ -112,7 +112,6 @@
             Tabla.TabIndex = 0;
             Tabla.CellClick += Tabla_CellClick;
             Tabla.CellMouseDown += Tabla_CellMouseDown;
-            Tabla.CellPainting += Tabla_CellPainting;
             Tabla.KeyDown += Tabla_KeyDown;
             // 
             // Id
