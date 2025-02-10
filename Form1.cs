@@ -21,6 +21,8 @@ using System.Reflection;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using System.Net.Mail;
 using System.Net;
+using DocumentFormat.OpenXml.Drawing.Diagrams;
+using DocumentFormat.OpenXml.Presentation;
 
 namespace Validación_de_Pedidos
 {
@@ -29,6 +31,7 @@ namespace Validación_de_Pedidos
         List<string> nombresArray = new();
         private List<string> nombresValor = new() { };
         List<Articulo> Articulos = new();
+        string path = "";
         public Form1()
         {
             InitializeComponent();
@@ -609,7 +612,8 @@ namespace Validación_de_Pedidos
                                 Menu Control = new Menu();
                                 Control.FuncionRecibir(TxtCodigo.Text, Articulos[i].Descripcion, Articulos[i].Solicitado, Articulos[i].Recibido, i, Articulos[i].Nota);
                                 Control.EnviarVariableEvent += new Menu.EnviarVariableDelegate(ejecutar);
-                                Control.Show();
+                                Control.ShowDialog();
+                                TxtCodigo.Focus();
                                 return;
                             }
                         }
@@ -1107,7 +1111,8 @@ namespace Validación_de_Pedidos
                                 Editar Control2 = new Editar();
                                 Control2.FuncionEditar(TxtCodigo.Text, Articulos[i].Descripcion, Articulos[i].Solicitado, Articulos[i].Recibido, i);
                                 Control2.EnviarVariableEvent2 += new Editar.EnviarVariableDelegate2(ejecutar);
-                                Control2.Show();
+                                Control2.ShowDialog();
+                                TxtCodigo.Focus();
                             }
                         }
                     }
@@ -1125,7 +1130,7 @@ namespace Validación_de_Pedidos
 
                 // Parámetros de entrada
                 command.Parameters.Add("V_ARTICULO_ID", FbDbType.Integer).Value = articulo_id;
-                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108404; //peri
+                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108401; //peri
                 //command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108405; culiacan
                 command.Parameters.Add("V_FECHA", FbDbType.Date).Value = DateTime.Today;
                 command.Parameters.Add("V_ES_ULTIMO_COSTO", FbDbType.Char).Value = 'S';
@@ -1140,8 +1145,8 @@ namespace Validación_de_Pedidos
                 command.Parameters.Add(paramEXISTENCIA);
                 // Ejecutar el procedimiento almacenado
                 command.ExecuteNonQuery();
-                int Existencia = Convert.ToInt32(command.Parameters[6].Value);
-
+                int ExistenciaAlmacen = Convert.ToInt32(command.Parameters[6].Value);
+                GlobalSettings.Instance.ExistenciaAl = ExistenciaAlmacen;
                 FbCommand command2 = new FbCommand("EXIVAL_ART", con);
                 command2.CommandType = CommandType.StoredProcedure;
 
@@ -1168,7 +1173,7 @@ namespace Validación_de_Pedidos
                 {
                     var customMessageBox = new Mensaje();
                     // Establece el mensaje que deseas mostrar
-                    customMessageBox.SetMensaje("TIENDA: " + ExistenciaTienda.ToString(), "existencia");
+                    customMessageBox.SetMensaje("ALMACÉN: " + ExistenciaAlmacen.ToString() +"\nTIENDA: " + ExistenciaTienda.ToString(), "existencia");
                     //customMessageBox.SetMensaje("CULIACÁN: " + ExistenciaTienda.ToString(), "existencia");
                     // Muestra el formulario como un cuadro de diálogo modal
                     customMessageBox.ShowDialog();
@@ -1989,7 +1994,7 @@ namespace Validación_de_Pedidos
 
                 // Parámetros de entrada
                 command.Parameters.Add("V_ARTICULO_ID", FbDbType.Integer).Value = articulo_id;
-                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108404; //PERI
+                command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108401; //PERI
                 //command.Parameters.Add("V_ALMACEN_ID", FbDbType.Integer).Value = 108405; culiacan
                 command.Parameters.Add("V_FECHA", FbDbType.Date).Value = DateTime.Today;
                 command.Parameters.Add("V_ES_ULTIMO_COSTO", FbDbType.Char).Value = 'S';
@@ -2004,6 +2009,7 @@ namespace Validación_de_Pedidos
                 command.Parameters.Add(paramEXISTENCIA);
                 // Ejecutar el procedimiento almacenado
                 command.ExecuteNonQuery();
+                GlobalSettings.Instance.ExistenciaAl = Convert.ToInt32(command.Parameters[6].Value);
                 int Existencia = Convert.ToInt32(command.Parameters[6].Value);
 
                 FbCommand command2 = new FbCommand("EXIVAL_ART", con);
@@ -2086,6 +2092,39 @@ namespace Validación_de_Pedidos
                 con.Close();
             }
         }
+        class Art_Ex
+        {
+            public string codigo { get; set; }
+            public decimal cantidad { get; set; }
+        }
+        public void CrearExcelLunesADomingo()
+        {
+            DateTime actual = DateTime.Now;
+            DateTime fechaActual = DateTime.Now;
+
+            // Calcular el día de la semana en formato numérico (lunes = 1, domingo = 7)
+            int valor_dia = (int)actual.DayOfWeek;
+            if (valor_dia == 0) valor_dia = 7; // Para que domingo sea 7
+
+            // Calcular cuántos días hay que restar para llegar al lunes
+            int diasRestar = valor_dia - 1;  // Restamos el día actual (lunes es 1)
+
+            // Si hoy es lunes, empezamos la semana con la fecha de hoy
+            DateTime inicioSemana = fechaActual.AddDays(-diasRestar);
+
+            // El final de la semana es el domingo de esa semana (7 días después del lunes)
+            DateTime finSemana = inicioSemana.AddDays(6);
+
+            // Crear el nombre del archivo Excel con el rango de fechas (lunes a domingo)
+            path = "\\\\SRVPRINCIPAL\\incompletosPedidos\\ArticulosIncompletos " +
+                          inicioSemana.ToString("yyyy-MM-dd") +
+                          " a " +
+                          finSemana.ToString("yyyy-MM-dd") +
+                          ".xlsx";
+
+            // Aquí puedes agregar el código para crear el archivo Excel si es necesario
+        }
+
         private void BtnPDF_Click(object sender, EventArgs e)
         {
             if (Articulos.Count == 0)
@@ -2098,31 +2137,58 @@ namespace Validación_de_Pedidos
                 MessageBox.Show("Te falta asignar un surtidor", "¡Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            DialogResult result = MessageBox.Show("¿Estás seguro que deseas terminar este pedido?\n Los artículos del pedido se van a modificar \n ¿Deseas continuar?", "Advertencia", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            if (result == DialogResult.Cancel)
+            {
+                return;
+            }
             bool bandera = false;
             string mensajemax = "";
+            //List<Art_Ex> Articulo = new List<Art_Ex>();
+            MensajeCustom candado = new MensajeCustom();
+            List<string> unicos = new List<string>();
             for (int i = 0; i < Articulos.Count; ++i)
             {
                 if (Articulos[i].Solicitado > Articulos[i].Recibido)
                 {
                     decimal existencia = ExistenciaValor(Articulos[i].ArticuloId.ToString());
-                    if (existencia >= Articulos[i].Pendiente)
+                    decimal existenciatotal = existencia + GlobalSettings.Instance.ExistenciaAl;
+                    decimal minimo_existencia = Articulos[i].Importe_neto_articulo;
+                    if (((existenciatotal >= Articulos[i].Pendiente && existenciatotal > 48) || (minimo_existencia > 150) && existenciatotal >= 1) && !unicos.Contains(Articulos[i].Codigo) && Articulos[i].Codigo.Substring(0, 3) != "232" && Articulos[i].Codigo.Substring(0, 3) != "214")
                     {
+                        decimal contador = 0;
+                        foreach (var ar in Articulos)
+                        {
+                            if (ar.Codigo == Articulos[i].Codigo)
+                            {
+                                contador += ar.Pendiente;
+                            }
+                        }
+                        unicos.Add(Articulos[i].Codigo);
                         bandera = true;
-                        string mensajepred = Articulos[i].Codigo + " ------- " + "Existencia: " + existencia + "\n";
-                        mensajemax += mensajepred;
+                        candado.Height += 25;
+                        candado.GridEx.Rows.Add(Articulos[i].Codigo, Articulos[i].Descripcion, contador, existencia, GlobalSettings.Instance.ExistenciaAl, existenciatotal);
+                        candado.GridEx.ClearSelection();
+                        //Articulo.Add(new Art_Ex { codigo = Articulos[i].Codigo, cantidad = existenciatotal });
+                        //string mensajepred = Articulos[i].Codigo + " ------- " + "Existencia Tienda: " + existencia+ "\n\t       Existencia Almacén: " + GlobalSettings.Instance.ExistenciaAl+ "\n\n";
+                        //mensajemax += mensajepred;
                     }
                 }
             }
             if (bandera == true)
             {
-                string mensaje1 = "!Estos códigos tienen existencia aún!\n\n";
-                string mensajefinal = mensaje1 + mensajemax;
-                MessageBox.Show(mensajefinal, "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            DialogResult result = MessageBox.Show("¿Estás seguro que deseas terminar este pedido?\n Los artículos del pedido se van a modificar \n ¿Deseas continuar?", "Advertencia", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-            if (result == DialogResult.Cancel)
-            {
-                return;
+                //string mensaje1 = "!Estos códigos tienen existencia aún!\n\n";
+                //string mensajefinal = mensaje1 + mensajemax;
+                //MessageBox.Show(mensajefinal, "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                candado.ShowDialog();
+                if (!GlobalSettings.Instance.aceptado)
+                {
+                    return;
+                }
+                //else
+                //{
+                //    GlobalSettings.Instance.aceptado = false;
+                //}
             }
             Validar();
             string Hoy = DateTime.Now.ToString("d-M-yy");
@@ -2151,8 +2217,8 @@ namespace Validación_de_Pedidos
             style.Font.FontSize = 15;
             style.Font.FontColor = System.Drawing.Color.Red;
             style.Font.Bold = true;
-            style.Alignment.Horizontal = HorizontalAlignmentValues.Center;
-            style.Alignment.Vertical = VerticalAlignmentValues.Center;
+            //style.Alignment.Horizontal = HorizontalAlignmentValues.Center;
+            //style.Alignment.Vertical = VerticalAlignmentValues.Center;
             sl.SetCellStyle("A1", style);
             sl.SetCellValue("A1", "REPORTE DE FALTANTES DE PEDIDOS");
             sl.MergeWorksheetCells("A1", "I1");
@@ -2168,14 +2234,16 @@ namespace Validación_de_Pedidos
             sl.SetCellValue("J2", "ESTATUS");
             sl.SetCellValue("K2", "EXISTENCIA");
             sl.SetCellValue("L2", "VENDEDOR");
-            int[] columnas = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            sl.SetCellValue("M2", "AUTORIZÓ");
+
+            int[] columnas = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
             foreach (int columna in columnas)
             {
                 if (columna == 1)
                     sl.SetColumnWidth(columna, 11);
                 if (columna == 2)
                     sl.SetColumnWidth(columna, 11);
-                if (columna == 3 || columna == 5)
+                if (columna == 3 || columna == 5 || columna == 13 || columna == 12)
                     sl.SetColumnWidth(columna, 30);
                 if (columna == 4)
                     sl.SetColumnWidth(columna, 11);
@@ -2210,11 +2278,13 @@ namespace Validación_de_Pedidos
                     sl.SetCellValue("G" + fila, Articulos[i].Recibido);
                     sl.SetCellValue("H" + fila, Articulos[i].Nota);
                     sl.SetCellValue("I" + fila, Articulos[i].Importe * Articulos[i].Pendiente);
-                    sl.SetCellValue("K" + fila, GlobalSettings.Instance.Existencia);
+                    sl.SetCellValue("K" + fila, GlobalSettings.Instance.Existencia + GlobalSettings.Instance.ExistenciaAl);
                     if (Articulos[i].Recibido == 0)
                         sl.SetCellValue("J" + fila, "FALTANTE");
                     else
                         sl.SetCellValue("J" + fila, "INCOMPLETO");
+                    if (GlobalSettings.Instance.aceptado)
+                        sl.SetCellValue("M" + fila, "AUTORIZÓ: " + GlobalSettings.Instance.Usuario);
                     sl.SetCellValue("L" + fila, GlobalSettings.Instance.Vendedora);
                     fila++;
                 }
@@ -2222,11 +2292,117 @@ namespace Validación_de_Pedidos
             GlobalSettings.Instance.ExistenciaQuery = false;
 
             sl.SaveAs(filePath);
-            doc.SetMargins(0, 0, 20, 20);
+
+
+            CrearExcelLunesADomingo();
+            //SEMANAL
+            bool fileExist0 = File.Exists(path);
+            Document doc0 = new Document();
+            try
+            {
+                if (!fileExist0)
+                {
+                    SLDocument oSLDocument0 = new();
+                    oSLDocument0.SaveAs(path);
+                }
+            }
+            catch (IOException ex)
+            {
+                // Maneja la excepción
+                MessageBox.Show("Se produjo un error al acceder a la ubicación de red: " + ex.Message);
+                // Aquí puedes realizar cualquier acción adicional, como cerrar la aplicación o retornar
+                return;
+            }
+            SLDocument sl0 = new(path);
+            //SLDocument excel = new(@"\\192.168.0.2\\incompletosPedidos\\ArticulosIncompletos");
+            SLStyle style0 = sl0.CreateStyle();
+            style0.Font.FontSize = 15;
+            style0.Font.FontColor = System.Drawing.Color.Red;
+            style0.Font.Bold = true;
+            //style.Alignment.Horizontal = HorizontalAlignmentValues.Center;
+            //style.Alignment.Vertical = VerticalAlignmentValues.Center;
+            sl0.SetCellStyle("A1", style0);
+            sl0.SetCellValue("A1", "REPORTE DE FALTANTES DE PEDIDOS");
+            sl0.MergeWorksheetCells("A1", "I1");
+            sl0.SetCellValue("A2", "FECHA");
+            sl0.SetCellValue("B2", "PEDIDO");
+            sl0.SetCellValue("C2", "SURTIDOR");
+            sl0.SetCellValue("D2", "CODIGO");
+            sl0.SetCellValue("E2", "DESCRIPCION");
+            sl0.SetCellValue("F2", "SOLICITADO");
+            sl0.SetCellValue("G2", "VERIFICADO");
+            sl0.SetCellValue("H2", "NOTA");
+            sl0.SetCellValue("I2", "IMPORTE");
+            sl0.SetCellValue("J2", "ESTATUS");
+            sl0.SetCellValue("K2", "EXISTENCIA");
+            sl0.SetCellValue("L2", "VENDEDOR");
+            sl0.SetCellValue("M2", "AUTORIZÓ");
+
+            int[] columnas0 = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
+            foreach (int columna in columnas0)
+            {
+                if (columna == 1)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 2)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 3 || columna == 5 || columna == 13 || columna == 12)
+                    sl0.SetColumnWidth(columna, 30);
+                if (columna == 4)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 30)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 9 || columna == 6)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 7)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 8)
+                    sl0.SetColumnWidth(columna, 11);
+                if (columna == 9)
+                    sl0.SetColumnWidth(columna, 20);
+            }
+            int fila0 = 3;
+            while (sl0.HasCellValue("A" + fila0))
+            {
+                fila0++;
+            }
+            for (int i = 0; i < Articulos.Count(); i++)
+            {
+                if (Articulos[i].Solicitado > Articulos[i].Recibido)
+                {
+                    GlobalSettings.Instance.ExistenciaQuery = true;
+                    Existencia(int.Parse(Articulos[i].ArticuloId));
+                    sl0.SetCellValue("A" + fila0, DateTime.Now.ToShortDateString().ToString());
+                    sl0.SetCellValue("B" + fila0, TxtPedido.Text);
+                    sl0.SetCellValue("C" + fila0, Cb_Surtidor.Text);
+                    sl0.SetCellValue("D" + fila0, Articulos[i].Codigo);
+                    sl0.SetCellValue("E" + fila0, Articulos[i].Descripcion);
+                    sl0.SetCellValue("F" + fila0, Articulos[i].Solicitado);
+                    sl0.SetCellValue("G" + fila0, Articulos[i].Recibido);
+                    sl0.SetCellValue("H" + fila0, Articulos[i].Nota);
+                    sl0.SetCellValue("I" + fila0, Articulos[i].Importe * Articulos[i].Pendiente);
+                    sl0.SetCellValue("K" + fila0, GlobalSettings.Instance.Existencia + GlobalSettings.Instance.ExistenciaAl);
+                    if (Articulos[i].Recibido == 0)
+                        sl0.SetCellValue("J" + fila0, "FALTANTE");
+                    else
+                        sl0.SetCellValue("J" + fila0, "INCOMPLETO");
+                    if (GlobalSettings.Instance.aceptado)
+                        sl0.SetCellValue("M" + fila0, "AUTORIZÓ: " + GlobalSettings.Instance.Usuario);
+                    sl0.SetCellValue("L" + fila0, GlobalSettings.Instance.Vendedora);
+                    fila0++;
+                }
+            }
+            GlobalSettings.Instance.ExistenciaQuery = false;
+
+            sl0.SaveAs(path);
+            //FIN SEMANAL
+            doc.SetMargins(0, 0, 10, 10);
             string fileName = "C:\\DatosPedidos\\" + TxtPedido.Text + ".pdf";
             //string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             //string filePath = Path.Combine(documentsPath, fileName);
-            PdfWriter.GetInstance(doc, new FileStream(fileName, FileMode.Create));
+        bool faltantes = false;
+        using (var fs = new FileStream(fileName, FileMode.Create))
+        {
+            PdfWriter.GetInstance(doc, fs);
             doc.Open();
 
             // Crear una tabla para los datos correctos
@@ -2237,21 +2413,21 @@ namespace Validación_de_Pedidos
             //cell.PaddingBottom = 10f;
             //cell.PaddingTop = 10f;
             //table.AddCell(cell);
-            float[] columnWidths = new float[] { 10f, 15f, 78f, 20f, 19f, 20f }; // Asumiendo que la segunda columna tendrá un ancho personalizado
+            float[] columnWidths = new float[] { 8f, 18f, 60f, 20f, 22f, 20f, 22f }; // Asumiendo que la segunda columna tendrá un ancho personalizado
             //table.SetWidths(columnWidths);
             // Crear una tabla para los datos faltantes
-            PdfPTable table2 = new PdfPTable(Tabla.Columns.Count - 1);
-            PdfPCell cell2 = new PdfPCell(new Phrase("ARTÍCULOS INCOMPLETOS", new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 16f, iTextSharp.text.Font.BOLD)));
-            cell2.Colspan = 6;
+            PdfPTable table2 = new PdfPTable(Tabla.Columns.Count);
+            PdfPCell cell2 = new PdfPCell(new Phrase("ARTÍCULOS INCOMPLETOS", new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 9f, iTextSharp.text.Font.BOLD)));
+            cell2.Colspan = 7;
             cell2.HorizontalAlignment = 1;
             cell2.PaddingBottom = 10f;
             cell2.PaddingTop = 10f;
             table2.AddCell(cell2);
             table2.SetWidths(columnWidths);
 
-            PdfPTable table4 = new PdfPTable(Tabla.Columns.Count - 1);
-            PdfPCell cell4 = new PdfPCell(new Phrase("ARTÍCULOS A ELIMINAR", new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 16f, iTextSharp.text.Font.BOLD)));
-            cell4.Colspan = 6;
+            PdfPTable table4 = new PdfPTable(Tabla.Columns.Count);
+            PdfPCell cell4 = new PdfPCell(new Phrase("ARTÍCULOS A ELIMINAR", new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 9f, iTextSharp.text.Font.BOLD)));
+            cell4.Colspan = 7;
             cell4.HorizontalAlignment = 1;
             cell4.PaddingBottom = 10f;
             cell4.PaddingTop = 10f;
@@ -2259,9 +2435,9 @@ namespace Validación_de_Pedidos
             table4.SetWidths(columnWidths);
 
             // Crear una tabla para los datos sobrantes
-            PdfPTable table3 = new PdfPTable(Tabla.Columns.Count - 1);
-            PdfPCell cell3 = new PdfPCell(new Phrase("ARTÍCULOS SOBRANTES", new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 16f, iTextSharp.text.Font.BOLD)));
-            cell3.Colspan = 6;
+            PdfPTable table3 = new PdfPTable(Tabla.Columns.Count);
+            PdfPCell cell3 = new PdfPCell(new Phrase("ARTÍCULOS SOBRANTES", new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 9f, iTextSharp.text.Font.BOLD)));
+            cell3.Colspan = 7;
             cell3.HorizontalAlignment = 1;
             cell3.PaddingBottom = 10f;
             cell3.PaddingTop = 10f;
@@ -2281,6 +2457,12 @@ namespace Validación_de_Pedidos
                     table3.AddCell(Tabla.Columns[i].HeaderText);
                     table4.AddCell(Tabla.Columns[i].HeaderText);
 
+                }
+                if (i == 5)
+                {
+                    table2.AddCell("Existencia");
+                    table3.AddCell("Existencia");
+                    table4.AddCell("Existencia");
                 }
             }
             bool tabla1 = false;
@@ -2305,6 +2487,7 @@ namespace Validación_de_Pedidos
                 {
                     if (Articulos[j].Id == i + a)
                     {
+
                         rows.Add(Articulos[j].Id, Articulos[j].Codigo, Articulos[j].Descripcion, Articulos[j].Solicitado, Articulos[j].Recibido, Articulos[j].Nota, Articulos[j].Pendiente);
                         DataGridViewRow row = Tabla.Rows[i];
 
@@ -2318,13 +2501,13 @@ namespace Validación_de_Pedidos
                 double.TryParse(Tabla[4, i].Value.ToString(), out double valorColumna4);
                 for (int j = 0; j < Tabla.Columns.Count; j++)
                 {
-                    if (Tabla[3, i].Value.ToString() == Tabla[4, i].Value.ToString() && j != 5)
+                    if (Tabla[3, i].Value.ToString() == Tabla[4, i].Value.ToString())
                     {
                         //table.AddCell(Tabla[j, i].Value.ToString());
                         //tabla1 = true;
                         //cont1++;
                     }
-                    else if (valorColumna4 < valorColumna3 && j != 5)
+                    else if (valorColumna4 < valorColumna3)
                     {
                         if (valorColumna4 == 0)
                         {
@@ -2346,12 +2529,26 @@ namespace Validación_de_Pedidos
                                 banderaModificacion = true;
                                 EliminarQuery();
                             }
+                            if (j == 5)
+                            {
+                                GlobalSettings.Instance.ExistenciaQuery = true;
+                                Existencia(int.Parse(Articulos[i].ArticuloId));
+                                Tabla[j, i].Value = GlobalSettings.Instance.Existencia + GlobalSettings.Instance.ExistenciaAl;
+                            }
+                            GlobalSettings.Instance.ExistenciaQuery = false;
                             table4.AddCell(Tabla[j, i].Value.ToString());
                             tabla4 = true;
                             cont4++;
                         }
                         else
                         {
+                            if (j == 5)
+                            {
+                                GlobalSettings.Instance.ExistenciaQuery = true;
+                                Existencia(int.Parse(Articulos[i].ArticuloId));
+                                Tabla[j, i].Value = GlobalSettings.Instance.Existencia + GlobalSettings.Instance.ExistenciaAl;
+                            }
+                            GlobalSettings.Instance.ExistenciaQuery = false;
                             table2.AddCell(Tabla[j, i].Value.ToString());
                             if (j == 0)
                             {
@@ -2384,8 +2581,15 @@ namespace Validación_de_Pedidos
 
                         }
                     }
-                    else if (valorColumna3 < valorColumna4 && j != 5)
+                    else if (valorColumna3 < valorColumna4)
                     {
+                        if (j == 5)
+                        {
+                            GlobalSettings.Instance.ExistenciaQuery = true;
+                            Existencia(int.Parse(Articulos[i].ArticuloId));
+                            Tabla[j, i].Value = GlobalSettings.Instance.Existencia + GlobalSettings.Instance.ExistenciaAl;
+                        }
+                        GlobalSettings.Instance.ExistenciaQuery = false;
                         table3.AddCell(Tabla[j, i].Value.ToString());
                         if (j == 0)
                         {
@@ -2422,15 +2626,15 @@ namespace Validación_de_Pedidos
             }
             Paragraph Name = new Paragraph("PEDIDO: " + TxtPedido.Text);
             Name.Alignment = Element.ALIGN_CENTER;
-            Paragraph contador4 = new Paragraph("Articulos Pendientes: " + (cont4 / 6).ToString());
+            Paragraph contador4 = new Paragraph("Articulos Pendientes: " + (cont4 / 7).ToString());
             contador4.Alignment = Element.ALIGN_CENTER;
-            Paragraph contador3 = new Paragraph("Articulos Sobrantes: " + (cont3 / 6).ToString());
+            Paragraph contador3 = new Paragraph("Articulos Sobrantes: " + (cont3 / 7).ToString());
             contador3.Alignment = Element.ALIGN_CENTER;
-            Paragraph contador2 = new Paragraph("Articulos Incompletos: " + (cont2 / 6).ToString());
+            Paragraph contador2 = new Paragraph("Articulos Incompletos: " + (cont2 / 7).ToString());
             contador2.Alignment = Element.ALIGN_CENTER;
-            Paragraph contador1 = new Paragraph("Articulos Correctos: " + (cont1 / 6).ToString());
+            Paragraph contador1 = new Paragraph("Articulos Correctos: " + (cont1 / 7).ToString());
             contador1.Alignment = Element.ALIGN_CENTER;
-            iTextSharp.text.Font customFont = FontFactory.GetFont("Arial", 10);
+            iTextSharp.text.Font customFont = FontFactory.GetFont("Arial", 9);
             Paragraph emptyParagraph = new Paragraph();
             emptyParagraph.SpacingBefore = 80f;
             Paragraph emptyParagraph2 = new Paragraph();
@@ -2468,7 +2672,6 @@ namespace Validación_de_Pedidos
                 doc.Add(contador4);
                 doc.Add(emptyParagraph2);
             }
-            bool faltantes = false;
             if (tabla2 == false && tabla3 == false && tabla4 == false)
             {
                 Paragraph completo = new Paragraph("EL PEDIDO ESTÁ COMPLETO");
@@ -2478,12 +2681,13 @@ namespace Validación_de_Pedidos
             else
             {
                 //ENVIAR CORREO 
-                faltantes = true;    
+                faltantes = true;
             }
             //doc.Add(cell4);
             doc.Add(emptyParagraph);
             // Cerrar el documento
             doc.Close();
+        }
             //TXT
             string carpeta = @"C:\DatosPedidos";
             string rutaArchivo = Path.Combine(carpeta, TxtPedido.Text + ".txt");
@@ -2522,7 +2726,12 @@ namespace Validación_de_Pedidos
                     string Vendedor = RevisarVendedor(GlobalSettings.Instance.Vendedor);
                     mensaje.To.Add(Vendedor); // Destinatario
                     mensaje.Subject = "Faltante de Pedido "+TxtPedido.Text;
-                    mensaje.Body = "SURTIDOR: "+Cb_Surtidor.Text;
+                    if(!GlobalSettings.Instance.aceptado)
+                        mensaje.Body = "SURTIDOR: "+Cb_Surtidor.Text;
+                    else
+                    {
+                        mensaje.Body = "SURTIDOR: "+Cb_Surtidor.Text+"\nAUTORIZÓ: " + GlobalSettings.Instance.Usuario;
+                    }
                     string Pdf = fileName;
                     Attachment adjunto = new Attachment(Pdf);
                     mensaje.Attachments.Add(adjunto);
@@ -2542,7 +2751,8 @@ namespace Validación_de_Pedidos
                     MessageBox.Show("Error.", ex.Message);
                 }
             }
-            Process.Start(new ProcessStartInfo(fileName) { UseShellExecute = true });
+            var process = Process.Start(new ProcessStartInfo(fileName) { UseShellExecute = true });
+            process.WaitForExit();
             TxtPedido.Text = string.Empty;
             TxtCodigo.Text = string.Empty;
             TxtPedido.Enabled = true;
@@ -2550,6 +2760,10 @@ namespace Validación_de_Pedidos
             BtnPedido.Enabled = true;
             Lb_renglones.Text = "0";
             Lb_Incompletos.Text = "0";
+            GlobalSettings.Instance.Existencia = 0;
+            GlobalSettings.Instance.aceptado = false;
+            GlobalSettings.Instance.ExistenciaAl = 0;
+            GlobalSettings.Instance.Usuario = "";
             GlobalSettings.Instance.Incompletos = 0;
             GlobalSettings.Instance.Impuesto_real = 0;
             GlobalSettings.Instance.Impuesto_total = 0;
@@ -2660,7 +2874,7 @@ namespace Validación_de_Pedidos
                 Lb_Incompletos.ForeColor = System.Drawing.Color.Red;
                 Lb_renglones.ForeColor = System.Drawing.Color.Red;
                 Cb_Descuentos.ForeColor = System.Drawing.Color.Red;
-                Cargar.ForeColor = System.Drawing.Color.Red;
+                Cargar.BackColor = System.Drawing.Color.Red;
                 Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.Red;
                 Tabla.Refresh();
 
@@ -2679,7 +2893,7 @@ namespace Validación_de_Pedidos
                 label8.ForeColor = System.Drawing.Color.HotPink;
                 Lb_Incompletos.ForeColor = System.Drawing.Color.HotPink;
                 Lb_renglones.ForeColor = System.Drawing.Color.HotPink;
-                Cargar.ForeColor = System.Drawing.Color.HotPink;
+                Cargar.BackColor = System.Drawing.Color.HotPink;
                 Cb_Descuentos.ForeColor = System.Drawing.Color.HotPink;
                 Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.HotPink;
                 Tabla.Refresh();
@@ -2700,7 +2914,7 @@ namespace Validación_de_Pedidos
                 Lb_Incompletos.ForeColor = System.Drawing.Color.BlueViolet;
                 Lb_renglones.ForeColor = System.Drawing.Color.BlueViolet;
                 Cb_Descuentos.ForeColor = System.Drawing.Color.BlueViolet;
-                Cargar.ForeColor = System.Drawing.Color.BlueViolet;
+                Cargar.BackColor = System.Drawing.Color.BlueViolet;
                 Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.BlueViolet;
                 Tabla.Refresh();
 
@@ -2720,7 +2934,7 @@ namespace Validación_de_Pedidos
                 Cb_Descuentos.ForeColor = System.Drawing.Color.CadetBlue;
                 Lb_Incompletos.ForeColor = System.Drawing.Color.CadetBlue;
                 Lb_renglones.ForeColor = System.Drawing.Color.CadetBlue;
-                Cargar.ForeColor = System.Drawing.Color.CadetBlue;
+                Cargar.BackColor = System.Drawing.Color.CadetBlue;
                 Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.CadetBlue;
                 Tabla.Refresh();
             }
@@ -2739,7 +2953,7 @@ namespace Validación_de_Pedidos
                 Lb_Incompletos.ForeColor = System.Drawing.Color.Fuchsia;
                 Lb_renglones.ForeColor = System.Drawing.Color.Fuchsia;
                 Cb_Descuentos.ForeColor = System.Drawing.Color.Fuchsia;
-                Cargar.ForeColor = System.Drawing.Color.Fuchsia;
+                Cargar.BackColor = System.Drawing.Color.Fuchsia;
                 Tabla.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.Fuchsia;
                 Tabla.Refresh();
 

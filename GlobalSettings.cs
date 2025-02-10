@@ -13,9 +13,12 @@ namespace Validación_de_Pedidos
         public string Puerto { get; set; }
         public string Direccion { get; set; }
         public string User { get; set; }
+        public decimal ExistenciaAl { get; set; }
         public string Pw { get; set; }
+        public bool aceptado { get; set; }
         public List<string> Config { get; set; }
         public string Name { get; set; }
+        public string Usuario { get; set; }
         public decimal Contenido {  get; set; }
         public string filepath { get; set; }
         public string Vendedor { get; set; }
