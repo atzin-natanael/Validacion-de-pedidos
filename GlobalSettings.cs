@@ -17,6 +17,7 @@ namespace Validación_de_Pedidos
         public string Pw { get; set; }
         public bool aceptado { get; set; }
         public List<string> Config { get; set; }
+        public List<string> Excluidos{ get; set; }
         public string Name { get; set; }
         public string Usuario { get; set; }
         public decimal Contenido {  get; set; }
@@ -64,7 +65,7 @@ namespace Validación_de_Pedidos
         {
             OficialCodigo = new List<string>();
             Config = new List<string>();
-
+            Excluidos = new List<string>();
         }
         public static GlobalSettings Instance
         {

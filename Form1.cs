@@ -38,6 +38,7 @@ namespace Validación_de_Pedidos
             Config();
             BtnPDF.Enabled = false;
             Leer_Datos();
+            CargarExcel();
             Cb_Surtidor.SelectedIndex = -1;
             Cb_Surtidor.DropDownHeight = 250;
             TxtPedido.Select();
@@ -67,6 +68,22 @@ namespace Validación_de_Pedidos
                 GlobalSettings.Instance.User = GlobalSettings.Instance.Config[3];
                 GlobalSettings.Instance.Pw = GlobalSettings.Instance.Config[4];
             }
+
+        }
+        public void CargarExcel()
+        {
+            string filePath = "\\\\SRVPRINCIPAL\\clavesSurtido\\Faltantes Excluidos.xlsx";
+            //string filePath = "C:\\clavesSurtido\\Claves.xlsx";
+            using (SLDocument documento = new SLDocument(filePath))
+            {
+                int filas = documento.GetWorksheetStatistics().NumberOfRows;
+                for (int i = 2; i < filas + 1; ++i)
+                {
+                    GlobalSettings.Instance.Excluidos.Add(documento.GetCellValueAsString("A" + i));
+                }
+                documento.CloseWithoutSaving();
+            }
+
 
         }
         public void Leer_Datos()
@@ -2154,7 +2171,7 @@ namespace Validación_de_Pedidos
                     decimal existencia = ExistenciaValor(Articulos[i].ArticuloId.ToString());
                     decimal existenciatotal = existencia + GlobalSettings.Instance.ExistenciaAl;
                     decimal minimo_existencia = Articulos[i].Importe_neto_articulo;
-                    if (((existenciatotal >= Articulos[i].Pendiente && existenciatotal > 48) || (minimo_existencia > 150) && existenciatotal >= 1) && !unicos.Contains(Articulos[i].Codigo) && Articulos[i].Codigo.Substring(0, 3) != "232" && Articulos[i].Codigo.Substring(0, 3) != "214")
+                    if (((existenciatotal >= Articulos[i].Pendiente && existenciatotal > 48) || (minimo_existencia > 100) && existenciatotal >= 1) && !unicos.Contains(Articulos[i].Codigo) && !GlobalSettings.Instance.Excluidos.Contains(Articulos[i].Codigo) && Articulos[i].Codigo.Substring(0, 3) != "232" && Articulos[i].Codigo.Substring(0, 3) != "214" && Articulos[i].Codigo.Substring(0, 3) != "243")
                     {
                         decimal contador = 0;
                         foreach (var ar in Articulos)
